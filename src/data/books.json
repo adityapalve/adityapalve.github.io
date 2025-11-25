@@ -1,0 +1,44 @@
+[
+  {
+    "title": "The Power Broker",
+    "author": "Robert Caro",
+    "isbn": "9780394720241",
+    "year": "2024",
+    "notes": "Masterpiece on urban planning and power"
+  },
+  {
+    "title": "Thinking, Fast and Slow",
+    "author": "Daniel Kahneman",
+    "isbn": "9780374533557",
+    "year": "2024",
+    "notes": "How we think and make decisions"
+  },
+  {
+    "title": "The Design of Everyday Things",
+    "author": "Don Norman",
+    "isbn": "9780465050659",
+    "year": "2024",
+    "notes": "Classic on human-centered design"
+  },
+  {
+    "title": "Sapiens",
+    "author": "Yuval Noah Harari",
+    "isbn": "9780062316097",
+    "year": "2023",
+    "notes": "Brief history of humankind"
+  },
+  {
+    "title": "The Pragmatic Programmer",
+    "author": "David Thomas & Andrew Hunt",
+    "isbn": "9780135957059",
+    "year": "2023",
+    "notes": "Timeless software craftsmanship"
+  },
+  {
+    "title": "Atomic Habits",
+    "author": "James Clear",
+    "isbn": "9780735211292",
+    "year": "2023",
+    "notes": "Small changes, remarkable results"
+  }
+]

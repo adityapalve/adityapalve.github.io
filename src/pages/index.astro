@@ -1,0 +1,43 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="Aditya Palve">
+  <h1>Aditya Palve</h1>
+  
+  <p>
+    Hello! I'm a developer interested in building things that matter. 
+    I enjoy exploring the intersection of technology, design, and human experience.
+  </p>
+  
+  <p>
+    Currently working on projects that span NLP, data visualization, and creative tools.
+    When I'm not coding, I'm likely reading, walking, or photographing the world around me.
+  </p>
+
+  <hr />
+
+  <h2>Selected Writing</h2>
+  
+  <ul class="writing-list">
+    <li>
+      <a href="/writing/hello-world">Hello World</a>
+      <span class="muted small"> — A first post on this new site</span>
+    </li>
+  </ul>
+
+  <p class="small muted" style="margin-top: 2rem;">
+    See all posts on the <a href="/writing">writing</a> page.
+  </p>
+</BaseLayout>
+
+<style>
+  .writing-list {
+    list-style: none;
+    padding-left: 0;
+  }
+  
+  .writing-list li {
+    margin-bottom: 0.75rem;
+  }
+</style>

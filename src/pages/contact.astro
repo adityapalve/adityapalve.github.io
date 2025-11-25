@@ -1,0 +1,35 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="Contact – Aditya Palve">
+  <h1>Contact</h1>
+  
+  <p>
+    Want to say hello? I'd love to hear from you.
+  </p>
+
+  <ul class="contact-list">
+    <li>
+      <strong>Email:</strong> <a href="mailto:hello@adityapalve.com">hello@adityapalve.com</a>
+    </li>
+    <li>
+      <strong>GitHub:</strong> <a href="https://github.com/adityapalve" target="_blank" rel="noopener">@adityapalve</a>
+    </li>
+    <li>
+      <strong>Twitter:</strong> <a href="https://twitter.com/adityapalve" target="_blank" rel="noopener">@adityapalve</a>
+    </li>
+  </ul>
+</BaseLayout>
+
+<style>
+  .contact-list {
+    list-style: none;
+    padding-left: 0;
+    margin-top: 1.5rem;
+  }
+  
+  .contact-list li {
+    margin-bottom: 0.75rem;
+  }
+</style>
