@@ -1,43 +1,89 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
+import { getCollection } from 'astro:content';
+import { loadFootpaths } from '../lib/footpaths';
+import { formatMonthYear, isoDate } from '../lib/format';
+
+const posts = (await getCollection('writing'))
+  .toSorted((a, b) => b.data.date.getTime() - a.data.date.getTime())
+  .slice(0, 3);
+
+const reading = (await getCollection('books')).filter((book) => book.data.status === 'reading');
+
+const latestFootpath = loadFootpaths()[0];
 ---
 
 <BaseLayout title="Aditya Palve">
   <h1>Aditya Palve</h1>
-  
+
   <p>
-    Hello! I'm a developer interested in building things that matter. 
-    I enjoy exploring the intersection of technology, design, and human experience.
+    I'm a software engineer at Jaguar Land Rover and an MEng Computer Science with Innovation
+    graduate from the University of Bristol.
   </p>
-  
+
   <p>
-    Currently working on projects that span NLP, data visualization, and creative tools.
-    When I'm not coding, I'm likely reading, walking, or photographing the world around me.
+    Over the past two years I've worked across several teams at JLR. Most recently I built
+    Astral, a semantic retrieval platform over RDF knowledge graphs, and wired GitLab and Jira
+    MCP servers into it to power an internal coding agent that retrieves, evaluates and updates
+    code across repositories. Before that: ETL pipelines from BigQuery into Tableau, CAN log
+    evaluation tooling, and the trilateration behind Phone-as-a-Key. The full story is told in
+    the <a href="/village">village</a>.
+  </p>
+
+  <p>
+    Away from work I read, walk, and photograph the places I end up in. Those turn into the
+    <a href="/bookshelf">bookshelf</a> and <a href="/footpaths">footpaths</a> here.
   </p>
 
   <hr />
 
-  <h2>Selected Writing</h2>
-  
-  <ul class="writing-list">
-    <li>
-      <a href="/writing/hello-world">Hello World</a>
-      <span class="muted small"> — A first post on this new site</span>
-    </li>
+  <h2>Writing</h2>
+
+  <ul class="plain-list">
+    {posts.map((post) => (
+      <li>
+        <a href={`/writing/${post.id}`}>{post.data.title}</a>
+        <span class="muted small"> — <time datetime={isoDate(post.data.date)}>{formatMonthYear(post.data.date)}</time></span>
+      </li>
+    ))}
   </ul>
 
-  <p class="small muted" style="margin-top: 2rem;">
-    See all posts on the <a href="/writing">writing</a> page.
+  <p class="small muted">
+    All posts on the <a href="/writing">writing</a> page.
   </p>
+
+  {reading.length > 0 && (
+    <>
+      <h2>Currently reading</h2>
+      <ul class="plain-list">
+        {reading.map((book) => (
+          <li>
+            <em>{book.data.title}</em>
+            <span class="muted small"> — {book.data.author}</span>
+          </li>
+        ))}
+      </ul>
+    </>
+  )}
+
+  {latestFootpath && (
+    <>
+      <h2>Latest footpath</h2>
+      <p>
+        <a href="/footpaths">{latestFootpath.location}</a>
+        <span class="muted small"> — <time datetime={latestFootpath.date}>{latestFootpath.date}</time></span>
+      </p>
+    </>
+  )}
 </BaseLayout>
 
 <style>
-  .writing-list {
+  .plain-list {
     list-style: none;
     padding-left: 0;
   }
-  
-  .writing-list li {
+
+  .plain-list li {
     margin-bottom: 0.75rem;
   }
 </style>
