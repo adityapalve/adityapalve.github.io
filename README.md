@@ -6,8 +6,8 @@ A minimal, text-first personal website built with [Astro](https://astro.build).
 
 - **Home** – Introduction and selected writing
 - **Writing** – Blog posts and long-form content
-- **Bookshelf** – Books I've read with covers from Open Library
-- **Footpaths** – Interactive map of places I've visited with photos
+- **Bookshelf** – Books I've read as a shelf of generated spines, linked to my notes
+- **Footpaths** – Map of places I've visited, generated from photo EXIF data
 - **Contact** – Ways to get in touch
 
 ## Development
@@ -28,41 +28,66 @@ npm run preview
 
 ## Adding Content
 
+Everything on the site is generated from files in the repo. Nothing is hand-edited in `src/pages`.
+
+### Writing (from Obsidian)
+
+Posts live in `src/content/writing/*.md` and are published from the Obsidian vault:
+
+1. In any note, add `publish: true` to the frontmatter. Optional: `title`, `date`,
+   `description`, `tags`, `slug`. Without a `date` the first publish date is kept.
+2. Run:
+
+   ```bash
+   npm run notes:publish
+   ```
+
+3. Commit the generated files.
+
+The vault defaults to `~/irendel`; override with `OBSIDIAN_VAULT=/path npm run notes:publish`.
+Wikilinks to other published notes become site links, other wikilinks become plain text,
+and embedded images are copied next to the post. Removing `publish: true` and re-running
+deletes the published copy.
+
 ### Books
 
-Edit `src/data/books.json`:
+Books live in `src/content/books/*.md`. Frontmatter:
 
-```json
-{
-  "title": "Book Title",
-  "author": "Author Name",
-  "isbn": "9780123456789",
-  "year": "2024",
-  "notes": "Brief note about the book"
-}
+```yaml
+title: The Power Broker
+author: Robert Caro
+year: 2024            # year finished
+isbn: "9780394720241" # optional
+status: finished      # reading | finished | abandoned
+pages: 1246           # optional, drives spine thickness
+spine: "#5a2e2e"      # optional, spine color (derived from the title otherwise)
+description: One line for the home page
 ```
 
-### Footpaths / Locations
+The markdown body is your notes. A book with a body gets a page and a clickable spine on
+the shelf; a book without one is just a spine. Books can also be published from Obsidian:
+set `type: book` alongside `publish: true` and the fields above.
 
-Edit `src/data/footpaths.json`:
+### Footpaths / Photos
 
-```json
-{
-  "id": "unique-id",
-  "location": "Place Name",
-  "lat": 37.7749,
-  "lng": -122.4194,
-  "date": "2024-01-15",
-  "photos": [
-    {
-      "src": "/photos/photo-name.jpg",
-      "caption": "Photo description"
-    }
-  ]
-}
+Drop photos in `src/assets/footpaths/<Place Name>/`. The build reads GPS and dates from
+EXIF and writes `src/data/footpaths.json` automatically (`npm run photos:import` to run
+it by hand). See [src/assets/footpaths/README.md](src/assets/footpaths/README.md) for
+overrides and captions.
+
+### The village (/village)
+
+A small pixel-art village built from the experience data. Each of the four `cases` in
+`src/data/experience.json` becomes a hut whose keeper reads out that case's `points`
+one bullet at a time; the keeper at the workshop stall by the pond covers `side`, with
+links. Art is drawn in code in `src/scripts/village/`; there are no image assets.
+
+## Checks
+
+```bash
+npm run lint    # oxlint with the vendored anti-slop rules (tools/oxlint/anti-slop)
+npm run check   # astro check (TypeScript)
 ```
-
-Photos go in `public/photos/`.
 
 ## Original Quartz Site
 
@@ -72,7 +97,7 @@ The original Quartz-based site is preserved in the `stash/` folder.
 
 - [Astro](https://astro.build) – Static site generator
 - [Leaflet](https://leafletjs.com) – Interactive maps
-- [Open Library](https://openlibrary.org) – Book cover images
+- [Obsidian](https://obsidian.md) – Where the writing happens; published with `npm run notes:publish`
 
 ## Commands
 
