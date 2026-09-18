@@ -13,4 +13,22 @@ const writing = defineCollection({
   }),
 });
 
-export const collections = { writing };
+const books = defineCollection({
+  loader: glob({ pattern: '**/*.md', base: './src/content/books' }),
+  schema: z.object({
+    title: z.string(),
+    author: z.string(),
+    /** Year finished (or started, while still reading). */
+    year: z.coerce.number().int(),
+    isbn: z.string().optional(),
+    status: z.enum(['reading', 'finished', 'abandoned']).default('finished'),
+    /** Page count drives spine thickness on the shelf. */
+    pages: z.coerce.number().int().positive().optional(),
+    /** CSS color for the spine; derived from the title when omitted. */
+    spine: z.string().optional(),
+    description: z.string().optional(),
+    source: z.string().optional(),
+  }),
+});
+
+export const collections = { writing, books };

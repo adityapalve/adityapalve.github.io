@@ -1,0 +1,69 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { getCollection, render } from 'astro:content';
+import { hasNotes, spineColor } from '../../lib/books';
+
+export async function getStaticPaths() {
+  const books = await getCollection('books');
+
+  return books.flatMap((book) => (hasNotes(book) ? [{ params: { slug: book.id }, props: { book } }] : []));
+}
+
+const { book } = Astro.props;
+
+const { Content } = await render(book);
+
+const { title, author, year, isbn, status, description } = book.data;
+---
+
+<BaseLayout title={`${title} – Bookshelf – Aditya Palve`} description={description ?? `Notes on ${title} by ${author}`}>
+  <article class="prose">
+    <header class="book-header">
+      <span class="swatch" style={`--spine-color: ${spineColor(book)}`} aria-hidden="true"></span>
+      <div>
+        <h1>{title}</h1>
+        <p class="muted small">
+          {author} · {status === 'finished' ? `finished ${year}` : `${status} · ${year}`}
+          {isbn && (
+            <>
+              {' · '}
+              <a href={`https://openlibrary.org/isbn/${isbn}`} target="_blank" rel="noopener">Open Library</a>
+            </>
+          )}
+        </p>
+      </div>
+    </header>
+
+    <Content />
+  </article>
+
+  <p class="back small"><a href="/bookshelf">← Back to the shelf</a></p>
+</BaseLayout>
+
+<style>
+  .book-header {
+    display: flex;
+    gap: 1rem;
+    align-items: flex-start;
+    margin-bottom: 2rem;
+  }
+
+  .book-header h1 {
+    margin-bottom: 0.5rem;
+  }
+
+  /* A slice of the spine color ties the page back to the shelf */
+  .swatch {
+    flex: none;
+    width: 14px;
+    height: 4.2rem;
+    margin-top: 0.3rem;
+    border-radius: 2px;
+    background: var(--spine-color);
+    box-shadow: var(--shadow-border);
+  }
+
+  .back {
+    margin-top: 3rem;
+  }
+</style>
