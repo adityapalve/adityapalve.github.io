@@ -10,6 +10,9 @@
     "lint": "oxlint",
     "lint:fix": "oxlint --fix",
     "check": "astro check",
+    "predev": "node scripts/import-photos.mjs",
+    "prebuild": "node scripts/import-photos.mjs",
+    "photos:import": "node scripts/import-photos.mjs",
     "notes:publish": "node scripts/publish.mjs"
   },
   "dependencies": {
