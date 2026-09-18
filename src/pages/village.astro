@@ -1,0 +1,383 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { loadExperience } from '../lib/experience';
+import { paletteColor } from '../lib/palette';
+
+const { cases, side } = loadExperience();
+
+const huts = cases.slice(0, 4).map((item, index) => ({
+  id: `hut-${index}`,
+  title: item.title,
+  label: item.label,
+  role: item.role,
+  points: item.points,
+}));
+
+const roofs = huts.map((hut) => paletteColor(hut.title));
+
+const workshop = {
+  title: 'Side projects',
+  projects: side.map((item) => ({ name: item.name, blurb: item.body[0] ?? '', url: item.url })),
+};
+
+const village = { huts, workshop, roofs };
+---
+
+<BaseLayout title="The village – Aditya Palve" description="Walk around a small village and talk to four keepers about what I've built.">
+  <h1 class="visually-hidden">The village</h1>
+
+  <div class="game" tabindex="-1">
+    <canvas class="screen" tabindex="0" aria-label="A pixel-art village. Use the arrow keys to walk to the huts and Enter to talk."></canvas>
+
+    <div class="hud">
+      <span class="label" id="hud-progress">Huts 0/4</span>
+      <button class="label hud-button" type="button" data-action="music" aria-pressed="false">♪ music off</button>
+    </div>
+
+    <p class="label prompt" hidden>Press Enter to talk</p>
+
+    <button class="start" type="button">Click to start <span class="label">arrow keys · enter</span></button>
+
+    <div class="pad" aria-label="Touch controls">
+      <div class="dpad">
+        <button type="button" data-dir="Up" aria-label="Up">▲</button>
+        <button type="button" data-dir="Left" aria-label="Left">◀</button>
+        <button type="button" data-dir="Right" aria-label="Right">▶</button>
+        <button type="button" data-dir="Down" aria-label="Down">▼</button>
+      </div>
+      <button type="button" class="action" data-action="confirm" aria-label="Talk or continue">A</button>
+    </div>
+  </div>
+
+  <script is:inline type="application/json" id="village-data" set:html={JSON.stringify(village)} />
+</BaseLayout>
+
+<style>
+  .label {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  .game {
+    position: relative;
+    aspect-ratio: 320 / 224;
+    background: #1d1a1f;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: var(--shadow-border);
+    outline: none;
+  }
+
+  .screen {
+    display: block;
+    width: 100%;
+    height: 100%;
+    image-rendering: pixelated;
+    outline: none;
+  }
+
+  .game:has(.screen:focus-visible) {
+    box-shadow:
+      var(--shadow-border),
+      0 0 0 3px var(--color-link);
+  }
+
+  .hud {
+    position: absolute;
+    top: 0.6rem;
+    right: 0.6rem;
+    display: flex;
+    gap: 0.4rem;
+    color: #fff;
+  }
+
+  .hud > * {
+    padding: 0.3rem 0.55rem;
+    border-radius: 4px;
+    background: rgba(29, 26, 31, 0.78);
+  }
+
+  .hud-button {
+    border: 0;
+    color: inherit;
+    cursor: pointer;
+    transition-property: background-color, scale;
+    transition-duration: 150ms;
+    transition-timing-function: var(--ease-out);
+  }
+
+  .hud-button[aria-pressed="true"] {
+    background: rgba(200, 68, 46, 0.85);
+  }
+
+  .hud-button:active {
+    scale: 0.96;
+  }
+
+  .hud-button:focus-visible {
+    outline: 2px solid #fff;
+    outline-offset: 2px;
+  }
+
+  .prompt {
+    position: absolute;
+    left: 50%;
+    top: 0.6rem;
+    translate: -50% 0;
+    margin: 0;
+    padding: 0.3rem 0.55rem;
+    border-radius: 4px;
+    background: rgba(29, 26, 31, 0.78);
+    color: #fff;
+    pointer-events: none;
+    white-space: nowrap;
+  }
+
+  /* Start gate: the game only takes the keyboard once you have clicked into it */
+  .start {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border: 0;
+    background: rgba(29, 26, 31, 0.55);
+    color: #fff;
+    font: inherit;
+    font-size: 1.1rem;
+    cursor: pointer;
+    transition: opacity 150ms var(--ease-out);
+  }
+
+  .start .label {
+    opacity: 0.7;
+  }
+
+  .start[hidden] {
+    display: none;
+  }
+
+  /* Text box: bottom of the screen, like the handhelds */
+  .game :global(.textbox) {
+    position: absolute;
+    left: 3%;
+    right: 3%;
+    bottom: 3%;
+    min-height: 26%;
+    padding: 0.8rem 1rem 1rem;
+    border: 3px solid #1d1a1f;
+    border-radius: 6px;
+    background: #fbf7ee;
+    color: #1d1a1f;
+    box-shadow:
+      inset 0 0 0 2px #fbf7ee,
+      inset 0 0 0 4px #7a7580;
+  }
+
+  .game :global(.textbox-speaker) {
+    position: absolute;
+    top: -0.9rem;
+    left: 0.8rem;
+    padding: 0.15rem 0.5rem;
+    border: 2px solid #1d1a1f;
+    border-radius: 4px;
+    background: #fbf7ee;
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .game :global(.textbox-text) {
+    margin: 0.35rem 0 0;
+    font-size: clamp(0.85rem, 2.6vw, 1rem);
+    line-height: 1.45;
+    min-height: 2.9em;
+  }
+
+  .game :global(.textbox-links) {
+    margin: 0.4rem 0 0;
+    display: flex;
+    gap: 1rem;
+    font-size: 0.85rem;
+  }
+
+  .game :global(.textbox-links:empty) {
+    display: none;
+  }
+
+  .game :global(.textbox-cue) {
+    position: absolute;
+    right: 0.8rem;
+    bottom: 0.4rem;
+    font-size: 0.7rem;
+    animation: cue-bob 700ms steps(2) infinite;
+  }
+
+  @keyframes cue-bob {
+    from {
+      translate: 0 0;
+    }
+
+    to {
+      translate: 0 2px;
+    }
+  }
+
+  /* Touch controls, only for coarse pointers */
+  .pad {
+    display: none;
+  }
+
+  @media (pointer: coarse) {
+    .pad {
+      position: absolute;
+      inset: auto 0 0 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      padding: 0.75rem;
+      pointer-events: none;
+    }
+
+    .dpad {
+      display: grid;
+      grid-template-columns: repeat(3, 38px);
+      grid-template-rows: repeat(3, 38px);
+      gap: 2px;
+    }
+
+    .dpad button,
+    .action {
+      pointer-events: auto;
+      border: 2px solid rgba(255, 255, 255, 0.6);
+      border-radius: 8px;
+      background: rgba(29, 26, 31, 0.4);
+      color: #fff;
+      font: inherit;
+      font-size: 0.9rem;
+      touch-action: none;
+      user-select: none;
+    }
+
+    .dpad button:nth-child(1) {
+      grid-column: 2;
+      grid-row: 1;
+    }
+
+    .dpad button:nth-child(2) {
+      grid-column: 1;
+      grid-row: 2;
+    }
+
+    .dpad button:nth-child(3) {
+      grid-column: 3;
+      grid-row: 2;
+    }
+
+    .dpad button:nth-child(4) {
+      grid-column: 2;
+      grid-row: 3;
+    }
+
+    .action {
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      font-weight: 600;
+    }
+
+    .dpad button:active,
+    .action:active {
+      background: rgba(255, 255, 255, 0.3);
+    }
+  }
+
+  .visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .game :global(.textbox-cue) {
+      animation: none;
+    }
+  }
+</style>
+
+<script>
+  import { startVillage, type VillageData } from '../scripts/village/game';
+
+  const root = document.querySelector<HTMLElement>('.game');
+
+  const canvas = document.querySelector<HTMLCanvasElement>('.screen');
+
+  const start = document.querySelector<HTMLButtonElement>('.start');
+
+  const progress = document.querySelector<HTMLElement>('#hud-progress');
+
+  const musicButton = document.querySelector<HTMLButtonElement>('[data-action="music"]');
+
+  const data: VillageData = JSON.parse(document.getElementById('village-data')?.textContent ?? '{"huts":[],"workshop":{"title":"","projects":[]},"roofs":[]}');
+
+  const musicKey = 'village-music';
+
+  const remembered = (): boolean => {
+    try {
+      return window.localStorage.getItem(musicKey) !== 'off';
+    } catch {
+      return true;
+    }
+  };
+
+  const remember = (on: boolean) => {
+    try {
+      window.localStorage.setItem(musicKey, on ? 'on' : 'off');
+    } catch {
+      // Storage unavailable; the toggle still works for this visit
+    }
+  };
+
+  if (root !== null && canvas !== null) {
+    const { music } = startVillage(root, canvas, data, (visited, total) => {
+      if (progress !== null) progress.textContent = visited === total ? `All ${total} huts visited` : `Huts ${visited}/${total}`;
+    });
+
+    const reflect = () => {
+      if (musicButton === null) return;
+
+      const on = music.isPlaying();
+
+      musicButton.setAttribute('aria-pressed', on ? 'true' : 'false');
+      musicButton.textContent = on ? '♪ music on' : '♪ music off';
+    };
+
+    musicButton?.addEventListener('click', () => {
+      remember(music.toggle());
+      reflect();
+      canvas.focus();
+    });
+
+    // Audio may only start from a gesture: the start click doubles as the music gate
+    start?.addEventListener('click', () => {
+      start.hidden = true;
+      canvas.focus();
+
+      if (remembered()) music.start();
+
+      reflect();
+    });
+
+    canvas.addEventListener('focus', () => {
+      if (start !== null) start.hidden = true;
+    });
+  }
+</script>
