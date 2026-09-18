@@ -40,6 +40,21 @@ const { title, description = "Aditya Palve's personal website" } = Astro.props;
     --color-link: #0066cc;
     --color-link-hover: #004499;
     --max-width: 640px;
+
+    /* Motion: one strong ease-out for every UI transition */
+    --ease-out: cubic-bezier(0.2, 0, 0, 1);
+
+    /* Depth: layered shadow acts as a 1px border ring plus lift */
+    --shadow-border:
+      0 0 0 1px oklch(0 0 0 / 0.06),
+      0 1px 2px -1px oklch(0 0 0 / 0.06),
+      0 2px 4px 0 oklch(0 0 0 / 0.04);
+    --shadow-border-hover:
+      0 0 0 1px oklch(0 0 0 / 0.08),
+      0 1px 2px -1px oklch(0 0 0 / 0.08),
+      0 2px 4px 0 oklch(0 0 0 / 0.06);
+    /* Image edge: pure black/white at low opacity, never a tinted neutral */
+    --outline-image: oklch(0 0 0 / 0.1);
   }
 
   @media (prefers-color-scheme: dark) {
@@ -49,6 +64,9 @@ const { title, description = "Aditya Palve's personal website" } = Astro.props;
       --color-muted: #888;
       --color-link: #6db3f2;
       --color-link-hover: #a8d4ff;
+      --shadow-border: 0 0 0 1px oklch(1 0 0 / 0.08);
+      --shadow-border-hover: 0 0 0 1px oklch(1 0 0 / 0.13);
+      --outline-image: oklch(1 0 0 / 0.1);
     }
   }
 
@@ -61,6 +79,8 @@ const { title, description = "Aditya Palve's personal website" } = Astro.props;
   html {
     font-size: 18px;
     line-height: 1.6;
+    /* Full-bleed sections use 100vw; clip the scrollbar-width overflow */
+    overflow-x: clip;
   }
 
   body {
@@ -92,18 +112,40 @@ const { title, description = "Aditya Palve's personal website" } = Astro.props;
     text-decoration: none;
   }
 
-  nav a:hover {
-    color: var(--color-text);
-  }
-
   a {
     color: var(--color-link);
     text-decoration: none;
+    /* High-frequency interaction: transition only color, ≤150ms */
+    transition-property: color, text-decoration-color;
+    transition-duration: 150ms;
+    transition-timing-function: var(--ease-out);
   }
 
-  a:hover {
-    color: var(--color-link-hover);
+  /* Links in content carry a quiet underline at rest: hover is not available on touch,
+     so the underline cannot be the only thing that marks a link. Nav links stay bare. */
+  main a {
     text-decoration: underline;
+    text-decoration-color: color-mix(in oklab, var(--color-link), transparent 60%);
+    text-underline-offset: 0.15em;
+  }
+
+  /* Gate hover behind real pointers so taps don't leave sticky hover states */
+  @media (hover: hover) and (pointer: fine) {
+    a:hover {
+      color: var(--color-link-hover);
+      text-decoration: underline;
+      text-decoration-color: currentColor;
+    }
+
+    nav a:hover {
+      color: var(--color-text);
+      text-decoration: none;
+    }
+  }
+
+  img {
+    outline: 1px solid var(--outline-image);
+    outline-offset: -1px;
   }
 
   h1 {
@@ -152,6 +194,49 @@ const { title, description = "Aditya Palve's personal website" } = Astro.props;
     border: none;
     border-top: 1px solid var(--color-muted);
     margin: 2rem 0;
+  }
+
+  img {
+    max-width: 100%;
+    height: auto;
+  }
+
+  p, li {
+    text-wrap: pretty;
+  }
+
+  h1, h2, h3 {
+    text-wrap: balance;
+  }
+
+  /* Rendered markdown */
+  .prose blockquote {
+    margin: 1.5rem 0;
+    padding-left: 1rem;
+    border-left: 2px solid var(--color-muted);
+    color: var(--color-muted);
+  }
+
+  .prose pre {
+    margin-bottom: 1rem;
+    padding: 1rem;
+    overflow-x: auto;
+    border-radius: 6px;
+    background: rgba(128, 128, 128, 0.1);
+    font-size: 0.85em;
+    line-height: 1.5;
+  }
+
+  .prose pre code {
+    padding: 0;
+    background: none;
+    font-size: inherit;
+  }
+
+  .prose img {
+    display: block;
+    margin: 1.5rem auto;
+    border-radius: 4px;
   }
 
   .muted {
