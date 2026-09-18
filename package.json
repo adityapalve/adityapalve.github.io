@@ -9,7 +9,8 @@
     "astro": "astro",
     "lint": "oxlint",
     "lint:fix": "oxlint --fix",
-    "check": "astro check"
+    "check": "astro check",
+    "notes:publish": "node scripts/publish.mjs"
   },
   "dependencies": {
     "astro": "^5.16.0",
