@@ -1,0 +1,138 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { loadExperience } from '../lib/experience';
+
+const { hero, cases, side, about, path, contact } = loadExperience();
+---
+
+<BaseLayout title="Experience – Aditya Palve" description={hero.headline}>
+  <h1>Experience</h1>
+
+  <p class="muted">
+    {hero.headline} This is the list version; the keepers in the <a href="/village">village</a> tell
+    the same story at walking pace.
+  </p>
+
+  <hr />
+
+  <h2>Things I've built</h2>
+
+  {cases.map((item) => (
+    <article class="entry">
+      <h3>{item.title}</h3>
+      <p class="muted small meta">{item.years} · {item.role}</p>
+      {item.body.map((paragraph) => <p>{paragraph}</p>)}
+      <p class="muted tags">{item.tags.map((tag, index) => <span>{tag}{index < item.tags.length - 1 && ' ·'}</span>)}</p>
+    </article>
+  ))}
+
+  <h2>On the side</h2>
+
+  {side.map((item) => (
+    <article class="entry">
+      <h3>
+        {item.url ? <a href={item.url} target="_blank" rel="noopener">{item.name} <span aria-hidden="true">↗</span></a> : item.name}
+      </h3>
+      {item.body.map((paragraph) => <p>{paragraph}</p>)}
+      <p class="muted tags">{item.tags.map((tag, index) => <span>{tag}{index < item.tags.length - 1 && ' ·'}</span>)}</p>
+    </article>
+  ))}
+
+  <h2>Where I've been</h2>
+
+  <ul class="path">
+    {path.map((stop) => (
+      <li>
+        <span class="date muted">{stop.period}</span>
+        <span class="stop-title">{stop.title}</span><span class="muted"> — {stop.org}</span>
+        <p class="muted small">{stop.blurb}</p>
+      </li>
+    ))}
+  </ul>
+
+  <h2>About</h2>
+
+  {about.map((paragraph) => <p>{paragraph}</p>)}
+
+  <h2>Say hello</h2>
+
+  <p>{contact.blurb}</p>
+
+  <p>
+    <a href={`mailto:${contact.email}`}>{contact.email}</a>
+    {contact.links.map((link) => (
+      <>
+        <span class="muted"> · </span>
+        <a href={link.url} target="_blank" rel="noopener">{link.label}</a>
+      </>
+    ))}
+  </p>
+</BaseLayout>
+
+<style>
+  .entry {
+    margin-bottom: 2.25rem;
+  }
+
+  .entry h3 {
+    margin-bottom: 0.25rem;
+  }
+
+  .entry h3 a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .meta {
+    margin-bottom: 0.9rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Same small mono as the bookshelf's year labels */
+  .tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 0.5em;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    letter-spacing: 0.02em;
+  }
+
+  /* A tag and its separator wrap together, so no line starts with a dot */
+  .tags span {
+    white-space: nowrap;
+  }
+
+  /* Laid out like the writing list: date above, title, then a line of description */
+  .path {
+    list-style: none;
+    padding-left: 0;
+    margin-bottom: 2.25rem;
+  }
+
+  .path li {
+    margin-bottom: 1.5rem;
+  }
+
+  .path .date {
+    display: block;
+    margin-bottom: 0.25rem;
+    font-size: 0.85rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .stop-title {
+    font-size: 1.1rem;
+  }
+
+  .path p {
+    margin: 0.25rem 0 0;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .entry h3 a:hover {
+      color: var(--color-link);
+      text-decoration: none;
+    }
+  }
+</style>

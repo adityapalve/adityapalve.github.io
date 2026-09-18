@@ -1,15 +1,12 @@
 {
   "hero": {
-    "greeting": "Hi, I'm Aditya.",
-    "headline": "I build systems that let people ask questions of messy engineering data.",
-    "circled": "ask questions",
-    "sub": "Software engineer at Jaguar Land Rover · MEng Computer Science with Innovation, University of Bristol"
+    "headline": "I build systems that let people ask questions of messy engineering data."
   },
   "cases": [
     {
       "years": "2025",
       "title": "Astral",
-      "role": "Semantic retrieval platform · full-stack",
+      "role": "Semantic knowledge graph retrieval platform · full-stack",
       "tags": [
         "Google Genkit",
         "RDF",
