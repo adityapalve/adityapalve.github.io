@@ -1,11 +1,9 @@
 import { createChiptune, type Chiptune } from './audio';
 import { createTextBox, type Page } from './dialog';
-import { buildWorld, key, mapHeight, mapWidth, viewHeight, viewWidth, type HutData, type Npc, type World, type WorkshopData } from './map';
-import { makeCanvas, tileSize } from './pixels';
-import { characterSprites, npcLooks, playerLook, type Facing } from './sprites';
-import { carSprite, drawGround, fenceSprite, hutSprite, plateHeight, signSprite, stallSprite, treeSprite } from './tiles';
-
-export type VillageData = { huts: HutData[]; workshop: WorkshopData; roofs: string[] };
+import { buildWorld, mapHeight, mapWidth, type HutData, type Npc, type VillageData, type WorkshopData } from './map';
+import { tileSize } from './pixels';
+import { createScene, fitCanvas } from './scene';
+import type { Facing } from './sprites';
 
 /** What the player is facing and could talk to. */
 type Target = { kind: 'npc'; npc: Npc } | { kind: 'sign' };
@@ -13,6 +11,9 @@ type Target = { kind: 'npc'; npc: Npc } | { kind: 'sign' };
 type Player = { tx: number; ty: number; facing: Facing; from: { tx: number; ty: number }; step: number; moving: boolean; cycle: number };
 
 const stepsPerSecond = 5.2;
+
+/** Roughly how many tiles fit across the shorter side of the screen. */
+const viewTiles = 12;
 
 const directions = new Map<Facing, { dx: number; dy: number }>([
   ['up', { dx: 0, dy: -1 }],
@@ -53,28 +54,6 @@ const welcomePages: Page[] = [
   { text: 'The workshop by the pond holds the side projects, with links.' },
 ];
 
-/** Two pre-rendered ground layers (water and flowers alternate between them). */
-function renderGround(world: World): HTMLCanvasElement[] {
-  const layers: HTMLCanvasElement[] = [];
-
-  for (let frame = 0; frame < 2; frame++) {
-    const [canvas, context] = makeCanvas(mapWidth * tileSize, mapHeight * tileSize);
-
-    for (let ty = 0; ty < mapHeight; ty++) {
-      for (let tx = 0; tx < mapWidth; tx++) {
-        context.save();
-        context.translate(tx * tileSize, ty * tileSize);
-        drawGround(context, world.ground[ty]![tx]!, tx, ty, frame);
-        context.restore();
-      }
-    }
-
-    layers.push(canvas);
-  }
-
-  return layers;
-}
-
 export type Village = { music: Chiptune };
 
 export function startVillage(root: HTMLElement, canvas: HTMLCanvasElement, data: VillageData, onProgress: (visited: number, total: number) => void): Village {
@@ -82,20 +61,14 @@ export function startVillage(root: HTMLElement, canvas: HTMLCanvasElement, data:
 
   if (context === null) throw new Error('village: 2d canvas unavailable');
 
-  canvas.width = viewWidth;
-  canvas.height = viewHeight;
-  context.imageSmoothingEnabled = false;
+  // The view grows with the window: the canvas always fills the page at a crisp whole-number scale
+  const fit = () => fitCanvas(canvas, context, root, viewTiles);
+
+  fit();
+  new ResizeObserver(fit).observe(root);
 
   const world = buildWorld(data.huts, data.workshop, data.roofs);
-  const ground = renderGround(world);
-  const trees = [treeSprite(0), treeSprite(1)];
-  const fence = fenceSprite();
-  const sign = signSprite();
-  const hutSprites = new Map(world.huts.map((hut) => [hut, hutSprite(hut.roof, hut.data.label, hut.emblem)]));
-  const stall = stallSprite('Projects');
-  const carSprites = new Map(world.cars.map((car) => [car, carSprite(car.color)]));
-  const npcSprites = new Map(world.npcs.map((npc) => [npc, characterSprites(npcLooks[npc.look % npcLooks.length]!)]));
-  const playerSprites = characterSprites(playerLook);
+  const scene = createScene(world);
   const textBox = createTextBox(root);
   const music = createChiptune();
   const prompt = root.querySelector<HTMLElement>('.prompt');
@@ -148,12 +121,12 @@ export function startVillage(root: HTMLElement, canvas: HTMLCanvasElement, data:
   const hutPages = (data: HutData): Page[] => {
     const remaining = world.huts.length - visited.size;
 
-    const closing =
+    const closing: Page =
       remaining === 0
-        ? "That's every hut. Thanks for walking round. The long version is on the experience page."
-        : `That's ${data.title}. ${remaining} hut${remaining === 1 ? '' : 's'} left to visit.`;
+        ? { text: "That's every hut. Thanks for walking round. The long version is on the experience page.", links: [{ label: 'Read the long version', url: '/experience' }] }
+        : { text: `That's ${data.title}. ${remaining} hut${remaining === 1 ? '' : 's'} left to visit.` };
 
-    return [{ text: `${data.title}. ${data.role}.` }, ...data.points.map((point) => ({ text: `• ${point}` })), { text: closing }];
+    return [{ text: `${data.title}. ${data.role}.` }, ...data.points.map((point) => ({ text: `• ${point}` })), closing];
   };
 
   const workshopPages = (data: WorkshopData): Page[] => [
@@ -258,6 +231,14 @@ export function startVillage(root: HTMLElement, canvas: HTMLCanvasElement, data:
     confirm();
   });
 
+  // Tapping the text box turns the page, like the handhelds; links inside it still work
+  textBox.element.addEventListener('click', (event) => {
+    if (event.target instanceof Element && event.target.closest('a') !== null) return;
+
+    canvas.focus();
+    confirm();
+  });
+
   // Simulation
   const update = (dt: number) => {
     if (player.moving) {
@@ -290,61 +271,14 @@ export function startVillage(root: HTMLElement, canvas: HTMLCanvasElement, data:
     if (prompt !== null) prompt.hidden = textBox.isOpen() || talkTarget() === undefined;
   };
 
-  // Drawing, row by row so things lower on the map paint over things above them
   const draw = (seconds: number) => {
-    const frame = Math.floor(seconds * 1.6) % 2;
     const px = (player.from.tx + (player.tx - player.from.tx) * player.step) * tileSize;
     const py = (player.from.ty + (player.ty - player.from.ty) * player.step) * tileSize;
-    const camX = Math.round(Math.min(Math.max(px + tileSize / 2 - viewWidth / 2, 0), mapWidth * tileSize - viewWidth));
-    const camY = Math.round(Math.min(Math.max(py + tileSize / 2 - viewHeight / 2, 0), mapHeight * tileSize - viewHeight));
+    const camX = Math.round(Math.min(Math.max(px + tileSize / 2 - canvas.width / 2, 0), mapWidth * tileSize - canvas.width));
+    const camY = Math.round(Math.min(Math.max(py + tileSize / 2 - canvas.height / 2, 0), mapHeight * tileSize - canvas.height));
+    const frame = player.moving ? 1 + (Math.floor(player.cycle) % 2) : 0;
 
-    context.clearRect(0, 0, viewWidth, viewHeight);
-    context.drawImage(ground[frame]!, -camX, -camY);
-
-    const playerRow = Math.round(py / tileSize);
-    const walkFrame = player.moving ? 1 + (Math.floor(player.cycle) % 2) : 0;
-    const bob = Math.floor(seconds * 1.25) % 2;
-
-    for (let ty = 0; ty < mapHeight; ty++) {
-      for (const hut of world.huts) {
-        if (hut.ty + 2 === ty) context.drawImage(hutSprites.get(hut)!, hut.tx * tileSize - camX, hut.ty * tileSize - plateHeight - camY);
-      }
-
-      if (world.workshop.ty + 1 === ty) {
-        context.drawImage(stall, world.workshop.tx * tileSize - camX, world.workshop.ty * tileSize - plateHeight - camY);
-      }
-
-      for (const car of world.cars) {
-        if (car.ty === ty) context.drawImage(carSprites.get(car)!, car.tx * tileSize - camX, car.ty * tileSize - camY);
-      }
-
-      for (let tx = 0; tx < mapWidth; tx++) {
-        const prop = world.props.get(key(tx, ty));
-
-        if (prop === undefined) continue;
-
-        const x = tx * tileSize - camX;
-        const y = ty * tileSize - camY;
-
-        if (prop.kind === 'tree') context.drawImage(trees[prop.variant % trees.length]!, x, y - 8);
-        else if (prop.kind === 'fence') context.drawImage(fence, x, y);
-        else context.drawImage(sign, x, y);
-      }
-
-      for (const npc of world.npcs) {
-        if (npc.ty !== ty) continue;
-
-        const sprite = npcSprites.get(npc)!.get(npc.facing)![0]!;
-
-        context.drawImage(sprite, npc.tx * tileSize - camX, npc.ty * tileSize - camY - bob);
-      }
-
-      if (ty === playerRow) {
-        const sprite = playerSprites.get(player.facing)![walkFrame]!;
-
-        context.drawImage(sprite, Math.round(px) - camX, Math.round(py) - camY - 2);
-      }
-    }
+    scene.draw(context, camX, camY, seconds, { x: px, y: py, facing: player.facing, frame });
   };
 
   // Fixed-step simulation: movement speed stays the same whether the tab runs at 120 fps or is throttled

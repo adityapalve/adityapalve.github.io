@@ -2,6 +2,7 @@
 export type Page = { text: string; links?: { label: string; url: string }[] };
 
 export type TextBox = {
+  element: HTMLElement;
   open: (speaker: string, pages: Page[], onClose: () => void) => void;
   advance: () => void;
   close: () => void;
@@ -52,10 +53,17 @@ export function createTextBox(root: HTMLElement): TextBox {
     for (const link of page.links ?? []) {
       const anchor = document.createElement('a');
 
+      // Other sites open in a new tab; pages on this site replace the village
+      const external = /^https?:/.test(link.url);
+
       anchor.href = link.url;
-      anchor.target = '_blank';
-      anchor.rel = 'noopener';
-      anchor.textContent = `${link.label} ↗`;
+      anchor.textContent = `${link.label} ${external ? '↗' : '→'}`;
+
+      if (external) {
+        anchor.target = '_blank';
+        anchor.rel = 'noopener';
+      }
+
       linksElement.append(anchor);
     }
 
@@ -88,6 +96,7 @@ export function createTextBox(root: HTMLElement): TextBox {
   };
 
   return {
+    element: box,
     open: (speaker, nextPages, onClose) => {
       pages = nextPages;
       index = 0;

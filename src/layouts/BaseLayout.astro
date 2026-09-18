@@ -2,9 +2,11 @@
 interface Props {
   title: string;
   description?: string;
+  /** Drop the reading column and the footer nav so the page can fill the window. */
+  bleed?: boolean;
 }
 
-const { title, description = "Aditya Palve's personal website" } = Astro.props;
+const { title, description = "Aditya Palve's personal website", bleed = false } = Astro.props;
 ---
 
 <!doctype html>
@@ -16,17 +18,19 @@ const { title, description = "Aditya Palve's personal website" } = Astro.props;
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <title>{title}</title>
   </head>
-  <body>
+  <body class:list={{ bleed }}>
     <main>
       <slot />
     </main>
-    <nav>
-      <a href="/">home</a> • 
-      <a href="/writing">writing</a> • 
-      <a href="/bookshelf">bookshelf</a> • 
-      <a href="/footpaths">footpaths</a> • 
-      <a href="/contact">contact</a>
-    </nav>
+    {!bleed && (
+      <nav>
+        <a href="/">home</a> • 
+        <a href="/writing">writing</a> • 
+        <a href="/bookshelf">bookshelf</a> • 
+        <a href="/footpaths">footpaths</a> • 
+        <a href="/contact">contact</a>
+      </nav>
+    )}
   </body>
 </html>
 
@@ -97,6 +101,11 @@ const { title, description = "Aditya Palve's personal website" } = Astro.props;
 
   main {
     flex: 1;
+  }
+
+  body.bleed {
+    max-width: none;
+    padding: 0;
   }
 
   nav {

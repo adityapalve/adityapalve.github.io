@@ -1,4 +1,4 @@
-import { noise, tileSize } from './pixels';
+import { noise } from './pixels';
 import type { Facing } from './sprites';
 import type { Emblem, Ground, Prop } from './tiles';
 
@@ -7,6 +7,9 @@ export type HutData = { id: string; title: string; label: string; role: string; 
 export type Project = { name: string; blurb: string; url?: string };
 
 export type WorkshopData = { title: string; projects: Project[] };
+
+/** Everything the page hands the village: one hut per piece of work, the workshop, and roof colours. */
+export type VillageData = { huts: HutData[]; workshop: WorkshopData; roofs: string[] };
 
 export type Hut = { data: HutData; tx: number; ty: number; roof: string; emblem: Emblem };
 
@@ -29,14 +32,6 @@ export type World = {
 export const mapWidth = 30;
 
 export const mapHeight = 22;
-
-export const viewTilesX = 20;
-
-export const viewTilesY = 14;
-
-export const viewWidth = viewTilesX * tileSize;
-
-export const viewHeight = viewTilesY * tileSize;
 
 export const key = (tx: number, ty: number): string => `${tx},${ty}`;
 

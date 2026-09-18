@@ -1,42 +1,32 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
-import { loadExperience } from '../lib/experience';
-import { paletteColor } from '../lib/palette';
+import { loadVillage } from '../lib/village';
 
-const { cases, side } = loadExperience();
-
-const huts = cases.slice(0, 4).map((item, index) => ({
-  id: `hut-${index}`,
-  title: item.title,
-  label: item.label,
-  role: item.role,
-  points: item.points,
-}));
-
-const roofs = huts.map((hut) => paletteColor(hut.title));
-
-const workshop = {
-  title: 'Side projects',
-  projects: side.map((item) => ({ name: item.name, blurb: item.body[0] ?? '', url: item.url })),
-};
-
-const village = { huts, workshop, roofs };
+const village = loadVillage();
 ---
 
-<BaseLayout title="The village – Aditya Palve" description="Walk around a small village and talk to four keepers about what I've built.">
+<BaseLayout title="The village – Aditya Palve" description="Walk around a small village and talk to four keepers about what I've built." bleed>
   <h1 class="visually-hidden">The village</h1>
 
   <div class="game" tabindex="-1">
     <canvas class="screen" tabindex="0" aria-label="A pixel-art village. Use the arrow keys to walk to the huts and Enter to talk."></canvas>
 
-    <div class="hud">
-      <span class="label" id="hud-progress">Huts 0/4</span>
-      <button class="label hud-button" type="button" data-action="music" aria-pressed="false">♪ music off</button>
+    <div class="hud hud-start">
+      <a class="label hud-button" href="/"><span aria-hidden="true">←</span> Home</a>
     </div>
 
-    <p class="label prompt" hidden>Press Enter to talk</p>
+    <div class="hud hud-end">
+      <span class="label" id="hud-progress">Huts 0/4</span>
+      <button class="label hud-button" type="button" data-action="music" aria-pressed="false">♪<span class="wide"> music</span> <span data-music-state>off</span></button>
+      <a class="label hud-button" href="/experience">Skip <span aria-hidden="true">▸▸</span></a>
+    </div>
 
-    <button class="start" type="button">Click to start <span class="label">arrow keys · enter</span></button>
+    <p class="label prompt" hidden><span class="for-keys">Press Enter</span><span class="for-touch">Press A</span> to talk</p>
+
+    <button class="start" type="button">
+      <span class="for-keys">Click to start</span><span class="for-touch">Tap to start</span>
+      <span class="label"><span class="for-keys">arrow keys · enter</span><span class="for-touch">d-pad · A</span></span>
+    </button>
 
     <div class="pad" aria-label="Touch controls">
       <div class="dpad">
@@ -60,41 +50,44 @@ const village = { huts, workshop, roofs };
     text-transform: uppercase;
   }
 
+  /* The whole window is the game; the canvas sizes itself in script at a whole-number pixel scale */
   .game {
     position: relative;
-    aspect-ratio: 320 / 224;
+    height: 100vh;
+    height: 100dvh;
     background: #1d1a1f;
-    border-radius: 8px;
     overflow: hidden;
-    box-shadow: var(--shadow-border);
     outline: none;
   }
 
   .screen {
     display: block;
-    width: 100%;
-    height: 100%;
     image-rendering: pixelated;
     outline: none;
   }
 
-  .game:has(.screen:focus-visible) {
-    box-shadow:
-      var(--shadow-border),
-      0 0 0 3px var(--color-link);
-  }
-
+  /* Above the start gate, so home, skip and music work before you start */
   .hud {
     position: absolute;
-    top: 0.6rem;
-    right: 0.6rem;
+    top: 0.75rem;
+    z-index: 2;
     display: flex;
+    flex-wrap: wrap;
     gap: 0.4rem;
     color: #fff;
   }
 
+  .hud-start {
+    left: 0.75rem;
+  }
+
+  .hud-end {
+    right: 0.75rem;
+    justify-content: flex-end;
+  }
+
   .hud > * {
-    padding: 0.3rem 0.55rem;
+    padding: 0.35rem 0.6rem;
     border-radius: 4px;
     background: rgba(29, 26, 31, 0.78);
   }
@@ -102,10 +95,19 @@ const village = { huts, workshop, roofs };
   .hud-button {
     border: 0;
     color: inherit;
+    text-decoration: none;
     cursor: pointer;
     transition-property: background-color, scale;
     transition-duration: 150ms;
     transition-timing-function: var(--ease-out);
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .hud-button:hover {
+      color: #fff;
+      background: rgba(29, 26, 31, 0.95);
+      text-decoration: none;
+    }
   }
 
   .hud-button[aria-pressed="true"] {
@@ -124,7 +126,7 @@ const village = { huts, workshop, roofs };
   .prompt {
     position: absolute;
     left: 50%;
-    top: 0.6rem;
+    top: 3.25rem;
     translate: -50% 0;
     margin: 0;
     padding: 0.3rem 0.55rem;
@@ -139,6 +141,7 @@ const village = { huts, workshop, roofs };
   .start {
     position: absolute;
     inset: 0;
+    z-index: 1;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -162,12 +165,16 @@ const village = { huts, workshop, roofs };
   }
 
   /* Text box: bottom of the screen, like the handhelds */
+  /* Handheld-sized on a big screen: reading width, not window width */
   .game :global(.textbox) {
     position: absolute;
-    left: 3%;
-    right: 3%;
-    bottom: 3%;
-    min-height: 26%;
+    left: 50%;
+    bottom: max(1rem, 3%);
+    translate: -50% 0;
+    width: min(100% - 2rem, 40rem);
+    min-height: 7.5rem;
+    z-index: 3;
+    cursor: pointer;
     padding: 0.8rem 1rem 1rem;
     border: 3px solid #1d1a1f;
     border-radius: 6px;
@@ -194,7 +201,7 @@ const village = { huts, workshop, roofs };
 
   .game :global(.textbox-text) {
     margin: 0.35rem 0 0;
-    font-size: clamp(0.85rem, 2.6vw, 1rem);
+    font-size: clamp(0.95rem, 2.6vw, 1.1rem);
     line-height: 1.45;
     min-height: 2.9em;
   }
@@ -233,7 +240,25 @@ const village = { huts, workshop, roofs };
     display: none;
   }
 
+  @media (max-width: 480px) {
+    .wide {
+      display: none;
+    }
+  }
+
+  .for-touch {
+    display: none;
+  }
+
   @media (pointer: coarse) {
+    .for-keys {
+      display: none;
+    }
+
+    .for-touch {
+      display: inline;
+    }
+
     .pad {
       position: absolute;
       inset: auto 0 0 0;
@@ -314,7 +339,8 @@ const village = { huts, workshop, roofs };
 </style>
 
 <script>
-  import { startVillage, type VillageData } from '../scripts/village/game';
+  import { startVillage } from '../scripts/village/game';
+  import type { VillageData } from '../scripts/village/map';
 
   const root = document.querySelector<HTMLElement>('.game');
 
@@ -357,7 +383,10 @@ const village = { huts, workshop, roofs };
       const on = music.isPlaying();
 
       musicButton.setAttribute('aria-pressed', on ? 'true' : 'false');
-      musicButton.textContent = on ? '♪ music on' : '♪ music off';
+
+      const state = musicButton.querySelector('[data-music-state]');
+
+      if (state !== null) state.textContent = on ? 'on' : 'off';
     };
 
     musicButton?.addEventListener('click', () => {
