@@ -1,0 +1,162 @@
+{
+  "hero": {
+    "headline": "I build systems that let people ask questions of messy engineering data."
+  },
+  "cases": [
+    {
+      "years": "2025",
+      "title": "Astral",
+      "role": "Semantic knowledge graph retrieval platform · full-stack",
+      "tags": [
+        "Google Genkit",
+        "RDF",
+        "OWL",
+        "SPARQL",
+        "Jena Fuseki",
+        "Vector search",
+        "TypeScript"
+      ],
+      "body": [
+        "JLR's engineering knowledge lives in RDF graphs. The graph answers precise questions well; people rarely ask precise questions. Astral is the retrieval platform I built on Google Genkit to close that gap.",
+        "The core idea is vector search over embeddings of the OWL ontologies themselves. When a question is underspecified, the platform first works out which part of the graph it is about, then generates SPARQL against that. I also authored ontologies that brought parts databases and cross-business datasets into the graph, which is what made component dependency tracking and capacity planning possible."
+      ],
+      "points": [
+        "Built Astral, a full-stack semantic retrieval platform over RDF knowledge graphs, on Google Genkit.",
+        "Added vector search over embeddings of the OWL ontologies, so underspecified questions still land on the right part of the graph.",
+        "Improved SPARQL query generation and retrieval accuracy for vague queries.",
+        "Authored OWL ontologies that brought parts databases and cross-business datasets into the graph, enabling component dependency tracking and capacity planning."
+      ],
+      "label": "Astral"
+    },
+    {
+      "years": "2025",
+      "title": "The coding agent",
+      "role": "Agents · MCP integrations",
+      "tags": [
+        "MCP",
+        "GitLab",
+        "Jira",
+        "Genkit"
+      ],
+      "body": [
+        "Once Astral could retrieve the right context, the next step was letting it act. I integrated the GitLab and Jira MCP servers into the platform, which turned it into an internal coding agent: it pulls the relevant code across repositories, evaluates it against the ticket, and pushes updates back.",
+        "It is the work I am most drawn to. Multi-step workflows that cross tool boundaries and still have to be trustworthy at every step."
+      ],
+      "points": [
+        "Integrated the GitLab and Jira MCP servers into Astral.",
+        "The agent retrieves, evaluates and updates code across repositories from a ticket.",
+        "Multi-step workflows that cross tool boundaries and stay trustworthy at every step."
+      ],
+      "label": "Agent"
+    },
+    {
+      "years": "2024 – 2025",
+      "title": "Operational metrics",
+      "role": "Data · ETL",
+      "tags": [
+        "GitLab CI/CD",
+        "GCP BigQuery",
+        "SQL",
+        "Tableau"
+      ],
+      "body": [
+        "Core operational metrics were scattered across CSV exports and SQL databases in BigQuery. I built the ETL pipelines, orchestrated through GitLab, that ingest them and land clean tables for Tableau, so the numbers people make decisions from update themselves."
+      ],
+      "points": [
+        "Built ETL pipelines orchestrated through GitLab.",
+        "Ingested CSV exports and SQL databases from GCP BigQuery.",
+        "Surfaced core operational metrics in Tableau so the numbers update themselves."
+      ],
+      "label": "Metrics"
+    },
+    {
+      "years": "2024 – 2025",
+      "title": "Vehicle data tooling",
+      "role": "Phone-as-a-Key · CAN · internal tools",
+      "tags": [
+        "Python",
+        "CAN",
+        "Win32"
+      ],
+      "body": [
+        "Phone-as-a-Key decides whether you mean to unlock the car from where your phone is. I extended its trilateration from 2D to 3D, which improved positional accuracy for the intention recognition model.",
+        "Evaluating corrupted CAN log runs was slow and one file at a time; I made it parallel across files, an 8x speed-up. I also refactored a WERS automation tool on Win32 APIs, a 4x per-sheet speed-up that ended its dependence on one maintainer."
+      ],
+      "points": [
+        "Extended Phone-as-a-Key trilateration from 2D to 3D, improving positional accuracy for the intention recognition model.",
+        "Made CAN log evaluation parallel across files: an 8x speed-up on corrupted runs.",
+        "Refactored a WERS automation tool on Win32 APIs: 4x faster per sheet, fewer bug reports, no single-person dependency."
+      ],
+      "label": "Vehicle"
+    }
+  ],
+  "side": [
+    {
+      "name": "Shared Photo Map",
+      "url": "https://maps.palve.dev/",
+      "tags": [
+        "Next.js",
+        "TypeScript",
+        "Mapbox GL",
+        "Deck.gl",
+        "Turso",
+        "AWS S3"
+      ],
+      "body": [
+        "A collaborative photo map that plots geotagged uploads on a 3D globe and hands out shareable links. Invite tokens split view-only from upload access. Uploads go straight to S3 through presigned PUT URLs to sidestep Vercel's payload limits, then EXIF GPS is indexed in libSQL. It is the idea behind the footpaths page here."
+      ]
+    },
+    {
+      "name": "FluidPaper",
+      "url": "https://github.com/adityapalve/fluidpaper",
+      "tags": [
+        "Rust",
+        "Pdfium"
+      ],
+      "body": [
+        "A Rust CLI that turns academic PDFs into clean reading-order text using Pdfium's character-level bounding boxes: line and paragraph grouping, heading detection, and suppression of headers, footers and tables. Built so papers could be read aloud by TTS without the furniture."
+      ]
+    }
+  ],
+  "about": [
+    "I like problems where the hard part is making information findable: a knowledge graph, a shelf of books, a folder of photos with coordinates buried in them.",
+    "This site is that instinct pointed at my own life. It is built with Astro, the writing is published straight from my Obsidian vault, and the bookshelf is generated from a folder of markdown files. Away from a keyboard I read, walk, and photograph the places I end up in."
+  ],
+  "path": [
+    {
+      "period": "Sep 2024 – Present",
+      "kind": "practice",
+      "title": "Graduate Software Engineer",
+      "org": "Jaguar Land Rover · Gaydon",
+      "blurb": "Built Astral and its coding agent, authored OWL ontologies for the knowledge graph, shipped ETL pipelines from BigQuery to Tableau, and sped up CAN log evaluation 8x and a WERS tool 4x."
+    },
+    {
+      "period": "Jul – Aug 2022",
+      "kind": "practice",
+      "title": "Software Engineer",
+      "org": "Psytech AI · Bristol",
+      "blurb": "Built a React component library from scratch in Storybook, cutting the team's development time by a third."
+    },
+    {
+      "period": "2020 – 2024",
+      "kind": "study",
+      "title": "MEng Computer Science with Innovation",
+      "org": "University of Bristol",
+      "blurb": "Projects included topic modelling and sentiment analysis of political tweets, and a Scotland Yard engine with Dijkstra pathing and Minimax opponents."
+    }
+  ],
+  "contact": {
+    "blurb": "Open to conversations about knowledge graphs, retrieval, agents, and the multi-step workflows that tie them together. Email is the fastest route.",
+    "email": "adi@palve.dev",
+    "links": [
+      {
+        "label": "GitHub",
+        "url": "https://github.com/adityapalve"
+      },
+      {
+        "label": "LinkedIn",
+        "url": "https://www.linkedin.com/in/adityapalve/"
+      }
+    ]
+  }
+}

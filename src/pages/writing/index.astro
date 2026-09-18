@@ -1,20 +1,28 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
+import { getCollection } from 'astro:content';
+import { formatDate, isoDate } from '../../lib/format';
+
+const posts = (await getCollection('writing')).toSorted((a, b) => b.data.date.getTime() - a.data.date.getTime());
 ---
 
 <BaseLayout title="Writing – Aditya Palve">
   <h1>Writing</h1>
-  
+
   <p class="muted">Thoughts, notes, and occasional long-form pieces.</p>
 
   <hr />
 
+  {posts.length === 0 && <p class="muted">Nothing published yet.</p>}
+
   <ul class="writing-list">
-    <li>
-      <span class="date muted">2024</span>
-      <a href="/writing/hello-world">Hello World</a>
-      <p class="description muted small">A first post on this new site</p>
-    </li>
+    {posts.map((post) => (
+      <li>
+        <time class="date muted" datetime={isoDate(post.data.date)}>{formatDate(post.data.date)}</time>
+        <a href={`/writing/${post.id}`}>{post.data.title}</a>
+        {post.data.description && <p class="description muted small">{post.data.description}</p>}
+      </li>
+    ))}
   </ul>
 </BaseLayout>
 
@@ -24,21 +32,22 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
     padding-left: 0;
     margin-top: 1.5rem;
   }
-  
+
   .writing-list li {
     margin-bottom: 1.5rem;
   }
-  
+
   .writing-list .date {
     font-size: 0.85rem;
     display: block;
     margin-bottom: 0.25rem;
+    font-variant-numeric: tabular-nums;
   }
-  
+
   .writing-list a {
     font-size: 1.1rem;
   }
-  
+
   .writing-list .description {
     margin-top: 0.25rem;
     margin-bottom: 0;

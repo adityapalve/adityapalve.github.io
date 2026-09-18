@@ -1,0 +1,44 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { getCollection, render } from 'astro:content';
+import { formatDate, isoDate } from '../../lib/format';
+
+export async function getStaticPaths() {
+  const posts = await getCollection('writing');
+
+  return posts.map((post) => ({ params: { slug: post.id }, props: { post } }));
+}
+
+const { post } = Astro.props;
+
+const { Content } = await render(post);
+---
+
+<BaseLayout title={`${post.data.title} – Aditya Palve`} description={post.data.description}>
+  <article class="prose">
+    <header>
+      <h1>{post.data.title}</h1>
+      <p class="muted small">
+        <time datetime={isoDate(post.data.date)}>{formatDate(post.data.date)}</time>
+      </p>
+    </header>
+
+    <Content />
+  </article>
+
+  <p class="back small"><a href="/writing">← All writing</a></p>
+</BaseLayout>
+
+<style>
+  article header {
+    margin-bottom: 2rem;
+  }
+
+  article header h1 {
+    margin-bottom: 0.5rem;
+  }
+
+  .back {
+    margin-top: 3rem;
+  }
+</style>

@@ -1,55 +1,94 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
-import footpaths from '../data/footpaths.json';
+import { getImage } from 'astro:assets';
+import { loadFootpaths } from '../lib/footpaths';
 
-// Convert footpaths to JSON for the client-side script
-const footpathsData = JSON.stringify(footpaths);
+// Every photo under src/assets/footpaths, keyed by absolute source path
+const photoModules = import.meta.glob<{ default: ImageMetadata }>(
+  '/src/assets/footpaths/**/*.{jpg,jpeg,png,webp,JPG,JPEG,PNG,WEBP}',
+);
+
+type Photo = { src: string; width: number; height: number; caption: string };
+
+type Place = { id: string; location: string; lat: number; lng: number; date: string; photos: Photo[] };
+
+const places: Place[] = [];
+
+for (const footpath of loadFootpaths()) {
+  const photos: Photo[] = [];
+
+  for (const photo of footpath.photos) {
+    const load = photoModules[`/src/assets/footpaths/${photo.file}`];
+
+    if (load === undefined) continue;
+
+    const { default: metadata } = await load();
+    const image = await getImage({ src: metadata, width: 1400, format: 'webp' });
+
+    photos.push({
+      src: image.src,
+      width: image.attributes.width,
+      height: image.attributes.height,
+      caption: photo.caption,
+    });
+  }
+
+  places.push({ ...footpath, photos });
+}
+
+const hasPlaces = places.length > 0;
 ---
 
 <BaseLayout title="Footpaths – Aditya Palve">
   <h1>Footpaths</h1>
-  
-  <p class="muted">
-    Places I've wandered. Click a marker to see photos from that location.
-  </p>
 
-  <div id="map-container">
-    <div id="map"></div>
-  </div>
+  <p class="muted">Places I've wandered. Click a marker to see photos from that location.</p>
 
-  <div id="photo-modal" class="modal">
-    <div class="modal-content">
-      <button class="modal-close" aria-label="Close">&times;</button>
-      <div class="modal-header">
-        <h3 id="modal-location"></h3>
-        <span id="modal-date" class="muted small"></span>
-      </div>
-      <div id="modal-photos"></div>
+  {hasPlaces ? (
+    <div id="map-container">
+      <div id="map" aria-label="Map of places"></div>
     </div>
-  </div>
+  ) : (
+    <p class="empty muted small">
+      No footpaths yet. Photos dropped into <code>src/assets/footpaths/&lt;place&gt;/</code> show up here on the next build.
+    </p>
+  )}
 
-  <hr />
+  <dialog id="photo-dialog" class="photo-dialog">
+    <button class="dialog-close" aria-label="Close" type="button">&times;</button>
+    <header class="dialog-header">
+      <h3 id="dialog-location"></h3>
+      <time id="dialog-date" class="muted small"></time>
+    </header>
+    <div id="dialog-photos" class="dialog-photos"></div>
+  </dialog>
 
-  <h2>Location List</h2>
-  <ul class="location-list">
-    {footpaths.map(fp => (
-      <li>
-        <span class="date muted small">{fp.date}</span>
-        <button class="location-link" data-id={fp.id}>
-          {fp.location}
-        </button>
-        <span class="muted small">— {fp.photos.length} photo{fp.photos.length !== 1 ? 's' : ''}</span>
-      </li>
-    ))}
-  </ul>
+  {hasPlaces && (
+    <>
+      <hr />
+
+      <h2>Location List</h2>
+      <ul class="location-list">
+        {places.map((place) => (
+          <li>
+            <time class="date muted small" datetime={place.date}>{place.date}</time>
+            <button class="location-link" data-id={place.id} type="button">{place.location}</button>
+            <span class="muted small">— {place.photos.length} photo{place.photos.length !== 1 ? 's' : ''}</span>
+          </li>
+        ))}
+      </ul>
+    </>
+  )}
 
   <hr />
 
   <p class="muted small">
-    <strong>How this works:</strong> I export photos from my iPhone, extract GPS coordinates 
-    from the EXIF data, and compile them into a data file that powers this map. 
-    Eventually, I'd like to automate this with an iOS Shortcut.
+    <strong>How this works:</strong> photos go into a folder in the repo, a build step reads the GPS
+    coordinates and dates from their EXIF data, and that powers the map. The published images are
+    re-encoded, so no location metadata ships with them.
   </p>
+
+  <script is:inline type="application/json" id="footpaths-data" set:html={JSON.stringify(places)} />
 </BaseLayout>
 
 <style>
@@ -57,13 +96,17 @@ const footpathsData = JSON.stringify(footpaths);
     margin: 1.5rem 0;
     border-radius: 8px;
     overflow: hidden;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    box-shadow: var(--shadow-border);
   }
 
   #map {
     width: 100%;
     height: 400px;
     background: #e0e0e0;
+  }
+
+  .empty {
+    margin: 1.5rem 0;
   }
 
   .location-list {
@@ -81,6 +124,7 @@ const footpathsData = JSON.stringify(footpaths);
 
   .location-list .date {
     min-width: 90px;
+    font-variant-numeric: tabular-nums;
   }
 
   .location-link {
@@ -92,44 +136,74 @@ const footpathsData = JSON.stringify(footpaths);
     font-size: inherit;
     padding: 0;
     text-decoration: none;
+    transition-property: color, scale;
+    transition-duration: 150ms;
+    transition-timing-function: var(--ease-out);
   }
 
-  .location-link:hover {
-    color: var(--color-link-hover);
-    text-decoration: underline;
+  /* Press feedback: always 0.96, interruptible via transition */
+  .location-link:active,
+  .dialog-close:active {
+    scale: 0.96;
   }
 
-  /* Modal styles */
-  .modal {
-    display: none;
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.8);
-    z-index: 1000;
-    align-items: center;
-    justify-content: center;
-    padding: 1rem;
-  }
-
-  .modal.active {
-    display: flex;
-  }
-
-  .modal-content {
+  /* Native dialog: focus trap, Escape, and inert background for free */
+  .photo-dialog {
     background: var(--color-bg);
+    color: var(--color-text);
+    border: none;
     border-radius: 8px;
     max-width: 600px;
-    width: 100%;
+    width: calc(100% - 2rem);
     max-height: 90vh;
-    overflow-y: auto;
-    position: relative;
     padding: 1.5rem;
+    box-shadow: var(--shadow-border);
+    /* Exit: 150ms, softer than enter. display/overlay wait for the fade via allow-discrete. */
+    opacity: 0;
+    scale: 0.95;
+    transition:
+      opacity 150ms var(--ease-out),
+      scale 150ms var(--ease-out),
+      display 150ms allow-discrete,
+      overlay 150ms allow-discrete;
   }
 
-  .modal-close {
+  .photo-dialog[open] {
+    opacity: 1;
+    scale: 1;
+    transition-duration: 200ms;
+
+    @starting-style {
+      opacity: 0;
+      scale: 0.95;
+    }
+  }
+
+  .photo-dialog::backdrop {
+    background: rgba(0, 0, 0, 0.8);
+    opacity: 0;
+    transition:
+      opacity 150ms var(--ease-out),
+      display 150ms allow-discrete,
+      overlay 150ms allow-discrete;
+  }
+
+  .photo-dialog[open]::backdrop {
+    opacity: 1;
+    transition-duration: 200ms;
+
+    @starting-style {
+      opacity: 0;
+    }
+  }
+
+  /* Keyboard-initiated close (Escape) gets no animation */
+  .photo-dialog[data-instant],
+  .photo-dialog[data-instant]::backdrop {
+    transition-duration: 0ms;
+  }
+
+  .dialog-close {
     position: absolute;
     top: 0.75rem;
     right: 1rem;
@@ -139,135 +213,179 @@ const footpathsData = JSON.stringify(footpaths);
     cursor: pointer;
     color: var(--color-muted);
     line-height: 1;
+    transition-property: color, scale;
+    transition-duration: 150ms;
+    transition-timing-function: var(--ease-out);
   }
 
-  .modal-close:hover {
-    color: var(--color-text);
-  }
-
-  .modal-header {
+  .dialog-header {
     margin-bottom: 1rem;
   }
 
-  .modal-header h3 {
+  .dialog-header h3 {
     margin: 0;
   }
 
-  #modal-photos {
+  .dialog-photos {
     display: flex;
     flex-direction: column;
-    gap: 1rem;
+    gap: 1.25rem;
   }
 
-  #modal-photos .photo-item {
-    text-align: center;
+  /* Rendered by the script below, so these live outside Astro's scoping */
+  .dialog-photos :global(figure) {
+    margin: 0;
   }
 
-  #modal-photos img {
-    max-width: 100%;
+  .dialog-photos :global(img) {
+    display: block;
+    width: 100%;
+    height: auto;
     border-radius: 4px;
   }
 
-  #modal-photos .photo-caption {
+  .dialog-photos :global(figcaption) {
     margin-top: 0.5rem;
     font-size: 0.9rem;
     color: var(--color-muted);
   }
 
-  /* Placeholder for when no photo exists */
-  .photo-placeholder {
-    background: linear-gradient(135deg, #667 0%, #445 100%);
-    width: 100%;
-    aspect-ratio: 4/3;
-    border-radius: 4px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: white;
-    font-size: 0.9rem;
+  @media (hover: hover) and (pointer: fine) {
+    .location-link:hover {
+      color: var(--color-link-hover);
+      text-decoration: underline;
+    }
+
+    .dialog-close:hover {
+      color: var(--color-text);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    /* Keep the opacity fade, drop the movement */
+    .photo-dialog,
+    .photo-dialog[open] {
+      scale: 1;
+      transition-property: opacity, display, overlay;
+    }
+
+    .location-link:active,
+    .dialog-close:active {
+      scale: 1;
+    }
   }
 </style>
 
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" is:inline></script>
+<script>
+  import L from 'leaflet';
+  import 'leaflet/dist/leaflet.css';
 
-<script define:vars={{ footpathsData }}>
-  const footpaths = JSON.parse(footpathsData);
-  
-  // Initialize map
-  document.addEventListener('DOMContentLoaded', () => {
-    // Create map centered on a middle point
-    const map = L.map('map').setView([30, 0], 2);
-    
-    // Add tile layer (using CartoDB's light tiles for minimal aesthetic)
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/">CARTO</a>',
-      maxZoom: 19
-    }).addTo(map);
-    
-    // Add markers for each location
-    const markers = {};
-    footpaths.forEach(fp => {
-      const marker = L.marker([fp.lat, fp.lng])
-        .addTo(map)
-        .bindPopup(`<strong>${fp.location}</strong><br><small>${fp.date}</small>`);
-      
-      marker.on('click', () => openModal(fp));
-      markers[fp.id] = marker;
-    });
-    
-    // Fit bounds to show all markers
-    if (footpaths.length > 0) {
-      const bounds = L.latLngBounds(footpaths.map(fp => [fp.lat, fp.lng]));
-      map.fitBounds(bounds, { padding: [30, 30] });
-    }
-    
-    // Modal functionality
-    const modal = document.getElementById('photo-modal');
-    const modalLocation = document.getElementById('modal-location');
-    const modalDate = document.getElementById('modal-date');
-    const modalPhotos = document.getElementById('modal-photos');
-    const modalClose = document.querySelector('.modal-close');
-    
-    function openModal(footpath) {
-      modalLocation.textContent = footpath.location;
-      modalDate.textContent = footpath.date;
-      
-      modalPhotos.innerHTML = footpath.photos.map(photo => `
-        <div class="photo-item">
-          <div class="photo-placeholder">
-            📷 Photo: ${photo.caption}
-          </div>
-          <p class="photo-caption">${photo.caption}</p>
-        </div>
-      `).join('');
-      
-      modal.classList.add('active');
-    }
-    
-    function closeModal() {
-      modal.classList.remove('active');
-    }
-    
-    modalClose.addEventListener('click', closeModal);
-    modal.addEventListener('click', (e) => {
-      if (e.target === modal) closeModal();
-    });
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') closeModal();
-    });
-    
-    // Location list click handlers
-    document.querySelectorAll('.location-link').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const id = btn.dataset.id;
-        const footpath = footpaths.find(fp => fp.id === id);
-        if (footpath) {
-          map.setView([footpath.lat, footpath.lng], 12);
-          markers[id].openPopup();
-          openModal(footpath);
-        }
-      });
-    });
+  type Photo = { src: string; width: number; height: number; caption: string };
+
+  type Place = { id: string; location: string; lat: number; lng: number; date: string; photos: Photo[] };
+
+  const places: Place[] = JSON.parse(document.getElementById('footpaths-data')?.textContent ?? '[]');
+
+  const dialog = document.querySelector<HTMLDialogElement>('#photo-dialog');
+
+  const dialogLocation = document.querySelector<HTMLElement>('#dialog-location');
+
+  const dialogDate = document.querySelector<HTMLTimeElement>('#dialog-date');
+
+  const dialogPhotos = document.querySelector<HTMLElement>('#dialog-photos');
+
+  if (dialog === null || dialogLocation === null || dialogDate === null || dialogPhotos === null) {
+    throw new Error('footpaths: dialog markup is missing');
+  }
+
+  function photoFigure(photo: Photo): HTMLElement {
+    const figure = document.createElement('figure');
+    const img = document.createElement('img');
+    const caption = document.createElement('figcaption');
+
+    img.src = photo.src;
+    img.width = photo.width;
+    img.height = photo.height;
+    img.alt = photo.caption;
+    img.loading = 'lazy';
+    caption.textContent = photo.caption;
+    figure.append(img, caption);
+
+    return figure;
+  }
+
+  // Arrow function, not a declaration, so the null checks above narrow inside it
+  const openPlace = (place: Place) => {
+    dialogLocation.textContent = place.location;
+    dialogDate.textContent = place.date;
+    dialogDate.dateTime = place.date;
+    dialogPhotos.replaceChildren(...place.photos.map(photoFigure));
+    delete dialog.dataset.instant;
+    dialog.showModal();
+  };
+
+  dialog.querySelector('.dialog-close')?.addEventListener('click', () => dialog.close());
+
+  // Keyboard-initiated close skips the exit animation. `cancel` covers the browser's own
+  // Escape handling; the keydown listener covers it when focus sits outside the dialog.
+  const closeInstantly = () => {
+    dialog.dataset.instant = '';
+    dialog.close();
+  };
+
+  dialog.addEventListener('cancel', () => {
+    dialog.dataset.instant = '';
   });
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key !== 'Escape' || !dialog.open) return;
+
+    event.preventDefault();
+    closeInstantly();
+  });
+
+  dialog.addEventListener('click', (event) => {
+    if (event.target === dialog) dialog.close();
+  });
+
+  const mapElement = document.getElementById('map');
+
+  if (mapElement !== null && places.length > 0) {
+    const map = L.map(mapElement, { scrollWheelZoom: false });
+
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      maxZoom: 19,
+    }).addTo(map);
+
+    const markers = new Map<string, L.CircleMarker>();
+
+    for (const place of places) {
+      const marker = L.circleMarker([place.lat, place.lng], {
+        radius: 7,
+        color: '#fff',
+        weight: 2,
+        fillColor: '#0066cc',
+        fillOpacity: 0.9,
+      })
+        .addTo(map)
+        .bindTooltip(place.location);
+
+      marker.on('click', () => openPlace(place));
+      markers.set(place.id, marker);
+    }
+
+    map.fitBounds(L.latLngBounds(places.map((place) => [place.lat, place.lng])), { padding: [30, 30], maxZoom: 12 });
+
+    for (const button of document.querySelectorAll<HTMLButtonElement>('.location-link')) {
+      button.addEventListener('click', () => {
+        const place = places.find((candidate) => candidate.id === button.dataset.id);
+
+        if (place === undefined) return;
+
+        map.setView([place.lat, place.lng], 12);
+        openPlace(place);
+      });
+    }
+  }
 </script>
