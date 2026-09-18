@@ -4,7 +4,9 @@ A minimal, text-first personal website built with [Astro](https://astro.build).
 
 ## Features
 
-- **Home** – Introduction and selected writing
+- **Home** – Introduction, a live postcard of the village, and recent writing
+- **Village** – My work as a small pixel-art village you walk around
+- **Experience** – The same story as a plain page, for anyone who skips the walk
 - **Writing** – Blog posts and long-form content
 - **Bookshelf** – Books I've read as a shelf of generated spines, linked to my notes
 - **Footpaths** – Map of places I've visited, generated from photo EXIF data
@@ -81,6 +83,10 @@ A small pixel-art village built from the experience data. Each of the four `case
 `src/data/experience.json` becomes a hut whose keeper reads out that case's `points`
 one bullet at a time; the keeper at the workshop stall by the pond covers `side`, with
 links. Art is drawn in code in `src/scripts/village/`; there are no image assets.
+
+The game fills the window. The home page shows a non-interactive postcard of the same
+village (`postcard.ts`), and `/experience` renders the full `experience.json` as a plain
+page; both "skip" links point there.
 
 ## Checks
 

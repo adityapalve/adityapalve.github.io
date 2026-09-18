@@ -3,6 +3,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import { getCollection } from 'astro:content';
 import { loadFootpaths } from '../lib/footpaths';
 import { formatMonthYear, isoDate } from '../lib/format';
+import { loadVillage } from '../lib/village';
 
 const posts = (await getCollection('writing'))
   .toSorted((a, b) => b.data.date.getTime() - a.data.date.getTime())
@@ -11,6 +12,8 @@ const posts = (await getCollection('writing'))
 const reading = (await getCollection('books')).filter((book) => book.data.status === 'reading');
 
 const latestFootpath = loadFootpaths()[0];
+
+const village = loadVillage();
 ---
 
 <BaseLayout title="Aditya Palve">
@@ -22,13 +25,20 @@ const latestFootpath = loadFootpaths()[0];
   </p>
 
   <p>
-    Over the past two years I've worked across several teams at JLR. Most recently I built
-    Astral, a semantic retrieval platform over RDF knowledge graphs, and wired GitLab and Jira
-    MCP servers into it to power an internal coding agent that retrieves, evaluates and updates
-    code across repositories. Before that: ETL pipelines from BigQuery into Tableau, CAN log
-    evaluation tooling, and the trilateration behind Phone-as-a-Key. The full story is told in
-    the <a href="/village">village</a>.
+    What I've built lives in a small village. Walk in, and the keeper of each hut will tell you
+    about one piece of it.
   </p>
+
+  <figure class="village">
+    <a class="window" href="/village" aria-label="Walk into the village">
+      <canvas class="postcard" aria-hidden="true"></canvas>
+      <span class="enter label"><span aria-hidden="true">▶</span> Walk in</span>
+    </a>
+    <figcaption class="village-foot">
+      <span class="label muted">{village.huts.length} huts · 1 workshop</span>
+      <a class="label skip" href="/experience">Skip to the list <span aria-hidden="true">▸▸</span></a>
+    </figcaption>
+  </figure>
 
   <p>
     Away from work I read, walk, and photograph the places I end up in. Those turn into the
@@ -75,9 +85,102 @@ const latestFootpath = loadFootpaths()[0];
       </p>
     </>
   )}
+
+  <script is:inline type="application/json" id="village-data" set:html={JSON.stringify(village)} />
 </BaseLayout>
 
 <style>
+  .label {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  .village {
+    margin-block: 1.75rem 2rem;
+  }
+
+  /* A window onto the village, framed like the footpaths map */
+  .window {
+    position: relative;
+    display: block;
+    aspect-ratio: 2 / 1;
+    overflow: hidden;
+    border-radius: 8px;
+    background: #1d1a1f;
+    box-shadow: var(--shadow-border);
+    transition: box-shadow 150ms var(--ease-out);
+  }
+
+  .window:focus-visible {
+    outline: 3px solid var(--color-link);
+    outline-offset: 2px;
+  }
+
+  .postcard {
+    display: block;
+    image-rendering: pixelated;
+  }
+
+  /* The same start gate the game uses, so the click lands where you expect */
+  .enter {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    translate: -50% -50%;
+    padding: 0.55rem 0.9rem;
+    border-radius: 4px;
+    background: rgba(29, 26, 31, 0.78);
+    color: #fff;
+    white-space: nowrap;
+    transition-property: background-color, scale;
+    transition-duration: 150ms;
+    transition-timing-function: var(--ease-out);
+  }
+
+  .window:active .enter {
+    scale: 0.96;
+  }
+
+  .village-foot {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 0.5rem 1rem;
+    margin-top: 0.75rem;
+  }
+
+  .skip {
+    text-decoration: none;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .window:hover {
+      box-shadow: var(--shadow-border-hover);
+    }
+
+    .window:hover .enter {
+      background: var(--color-link);
+    }
+
+    .skip:hover {
+      text-decoration: none;
+    }
+  }
+
+  @media (max-width: 560px) {
+    .window {
+      aspect-ratio: 4 / 3;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .window:active .enter {
+      scale: 1;
+    }
+  }
+
   .plain-list {
     list-style: none;
     padding-left: 0;
@@ -87,3 +190,20 @@ const latestFootpath = loadFootpaths()[0];
     margin-bottom: 0.75rem;
   }
 </style>
+
+<script>
+  import type { VillageData } from '../scripts/village/map';
+  import { startPostcard } from '../scripts/village/postcard';
+
+  const frame = document.querySelector<HTMLElement>('.window');
+
+  const canvas = document.querySelector<HTMLCanvasElement>('.postcard');
+
+  const raw = document.getElementById('village-data')?.textContent;
+
+  if (frame !== null && canvas !== null && raw !== undefined && raw !== null) {
+    const data: VillageData = JSON.parse(raw);
+
+    startPostcard(canvas, frame, data);
+  }
+</script>
