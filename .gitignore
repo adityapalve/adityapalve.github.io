@@ -26,3 +26,6 @@ stash
 
 # local Claude Code settings
 .claude/settings.local.json
+
+# agent skills are installed locally; skills-lock.json records which ones
+.claude/skills/
