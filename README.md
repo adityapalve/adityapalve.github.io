@@ -96,8 +96,14 @@ The map also has an eastern lake, a small island, and a southern grove:
   toggle faster land travel. Entering water dismounts the bicycle.
 - **Surf:** with Squirtle, walk into water to surf. Walk onto land to come ashore.
   Without Squirtle, water blocks movement; interact with it for a hint.
-- **Secrets:** read the island lookout and grove signs to discover two hidden messages.
-  Re-reading a sign does not increase the discovery count.
+- **Frostfall Cave:** surf to the island and walk into the opening in its northern ridge.
+  This original Icefall-inspired cavern has sliding ice, rocky stopping points, an animated
+  waterfall, and a surfable pool. On ice you keep moving straight until reaching dry ground
+  or an obstacle; after stopping, choose another direction. Bicycles stay dismounted inside.
+  Walk through the glowing southern doorway to return to the island. Your companion,
+  bicycle, visited huts, and discoveries are retained when changing areas.
+- **Secrets:** read the island lookout, grove, and frozen chamber signs to discover three
+  hidden messages. Re-reading a sign does not increase the discovery count.
 
 Movement uses arrows or WASD; Enter, Space, E, or Z interacts; Escape closes dialogue.
 Touch controls provide a d-pad and A, plus a Cycle button after collecting the bike.
@@ -108,9 +114,9 @@ Companion, bicycle, and discovery progress last for the current visit and reset 
 The current renderer uses Canvas 2D, not p5.js. A p5 migration does not require rebuilding
 the whole game:
 
-- `map.ts` owns terrain, obstacles, buildings, and discoverable locations.
-- `adventure.ts` owns movement, collision, companion following, unlocks, and travel modes,
-  without DOM or drawing dependencies.
+- `map.ts` owns village terrain and locations; `cave-map.ts` defines the cave interior.
+- `adventure.ts` owns movement, collision, companion following, unlocks, ice sliding,
+  and area-transition state, without DOM or drawing dependencies.
 - `sprites.ts`, `tiles.ts`, and `adventure-sprites.ts` generate cached canvas sprites.
 - `dialog.ts` and the page's HTML HUD can stay outside the sketch, keeping text and
   controls accessible.

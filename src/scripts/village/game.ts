@@ -1,9 +1,10 @@
 import { createChiptune, type Chiptune } from './audio';
 import { createAdventure, directions } from './adventure';
+import { buildCave } from './cave-map';
 import { createTextBox, type Page } from './dialog';
 import { buildWorld, mapHeight, mapWidth, type HutData, type Npc, type VillageData, type WorkshopData, type World } from './map';
 import { tileSize } from './pixels';
-import { createScene, fitCanvas } from './scene';
+import { createScene, fitCanvas, type Scene } from './scene';
 import type { Facing } from './sprites';
 
 /** What the player is facing and could talk to. */
@@ -59,8 +60,10 @@ export function startVillage(root: HTMLElement, canvas: HTMLCanvasElement, data:
   fit();
   new ResizeObserver(fit).observe(root);
 
-  const world = buildWorld(data.huts, data.workshop, data.roofs);
-  const scene = createScene(world);
+  const worlds: Record<World['area'], World> = { village: buildWorld(data.huts, data.workshop, data.roofs), cave: buildCave() };
+  let world = worlds.village;
+  const scenes: Partial<Record<World['area'], Scene>> = { village: createScene(world) };
+  let scene = scenes.village!;
   const textBox = createTextBox(root);
   const music = createChiptune();
   const prompt = root.querySelector<HTMLElement>('.prompt');
@@ -75,7 +78,7 @@ export function startVillage(root: HTMLElement, canvas: HTMLCanvasElement, data:
   let lastStatus = '';
 
   const reflectAdventure = () => {
-    const text = `${state.hasCompanion ? 'Squirtle' : 'Find Squirtle'} · ${state.mode === 'surf' ? 'Surfing' : state.mode === 'bike' ? 'Cycling' : 'Walking'}${state.hasBike ? ' · Bicycle' : ''} · Secrets ${secrets.size}/2`;
+    const text = `${state.area === 'cave' ? 'Frostfall Cave · ' : ''}${state.hasCompanion ? 'Squirtle' : 'Find Squirtle'} · ${state.sliding ? 'Sliding' : state.mode === 'surf' ? 'Surfing' : state.mode === 'bike' ? 'Cycling' : 'Walking'}${state.hasBike ? ' · Bicycle' : ''} · Secrets ${secrets.size}/3`;
 
     if (text === lastStatus) return;
 
@@ -84,7 +87,7 @@ export function startVillage(root: HTMLElement, canvas: HTMLCanvasElement, data:
 
     if (bikeButton !== null) {
       bikeButton.hidden = !state.hasBike;
-      bikeButton.disabled = state.mode === 'surf';
+      bikeButton.disabled = state.mode === 'surf' || state.area === 'cave';
       bikeButton.setAttribute('aria-pressed', String(state.mode === 'bike'));
       bikeButton.textContent = state.mode === 'bike' ? 'B · Walk' : 'B · Cycle';
     }
@@ -118,7 +121,7 @@ export function startVillage(root: HTMLElement, canvas: HTMLCanvasElement, data:
 
     if (npc !== undefined) return { kind: 'npc', npc };
 
-    if (tile.tx === world.sign.tx && tile.ty === world.sign.ty) return { kind: 'sign' };
+    if (world.sign !== undefined && tile.tx === world.sign.tx && tile.ty === world.sign.ty) return { kind: 'sign' };
 
     const feature = world.features.find((feature) =>
       feature.tx === tile.tx && feature.ty === tile.ty &&
@@ -178,11 +181,18 @@ export function startVillage(root: HTMLElement, canvas: HTMLCanvasElement, data:
         pages = [{ text: 'You found a bicycle! Press B, or the Cycle button, to hop on and off. You travel faster on land; Squirtle handles the water.' }];
       } else if (feature.id === 'shore') {
         pages = [{ text: 'Ripple Lake. Bring Squirtle and walk into the water to Surf. The tiny island to the east has a message for curious travelers.' }];
+      } else if (feature.id === 'cave-guide') {
+        pages = [
+          { text: 'Frostfall Cave. Ice carries you straight ahead until you reach stone or an obstacle. Use the rocky outcrops to change direction.' },
+          { text: 'Squirtle can surf the pool, but the waterfall is too steep to climb. Leave your bicycle outside. The glowing doorway to the south leads back to the island.' },
+        ];
       } else {
         secrets.add(feature.id);
         pages = feature.id === 'island'
-          ? [{ text: 'You found the secret island! The sign says: “There is no Mew under the parked car. We checked.”' }, { text: 'Squirtle looks delighted. Some detours are their own reward.' }]
-          : [{ text: 'You found the quiet grove! “A trainer needs a break, too.” The trees rustle. Somewhere, a very sleepy Snorlax approves.' }];
+          ? [{ text: 'You found the secret island! The sign says: “There is no Mew under the parked car. We checked.”' }, { text: 'A cold breeze drifts from the opening in the northern rocks. Walk inside to explore Frostfall Cave.' }]
+          : feature.id === 'cave-reward'
+            ? [{ text: 'You found the frozen echo! Someone has carved into the crystal: “The long way round is sometimes the best part.”' }, { text: 'Squirtle taps the ice. A tiny chime disappears into the waterfall.' }]
+            : [{ text: 'You found the quiet grove! “A trainer needs a break, too.” The trees rustle. Somewhere, a very sleepy Snorlax approves.' }];
       }
 
       music.chime();
@@ -312,7 +322,16 @@ export function startVillage(root: HTMLElement, canvas: HTMLCanvasElement, data:
 
   // Simulation
   const update = (dt: number) => {
-    adventure.update(dt, textBox.isOpen() ? undefined : held[held.length - 1]);
+    const portal = adventure.update(dt, textBox.isOpen() ? undefined : held[held.length - 1]);
+
+    if (portal !== undefined) {
+      world = worlds[portal.to];
+      adventure.travelTo(world, portal.arrival);
+      scene = scenes[portal.to] ??= createScene(world);
+      held.splice(0, held.length);
+      music.blip();
+    }
+
     reflectAdventure();
 
     if (prompt !== null) prompt.hidden = player.moving || textBox.isOpen() || talkTarget() === undefined;

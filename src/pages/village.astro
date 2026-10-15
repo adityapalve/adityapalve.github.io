@@ -5,11 +5,11 @@ import { loadVillage } from '../lib/village';
 const village = loadVillage();
 ---
 
-<BaseLayout title="The village – Aditya Palve" description="Explore a pixel-art village, meet Squirtle, find a bicycle, and surf to a secret island." bleed>
+<BaseLayout title="The village – Aditya Palve" description="Explore a pixel-art village with Squirtle, cycle around the lake, and discover an icy cave on a secret island." bleed>
   <h1 class="visually-hidden">The village</h1>
 
   <div class="game" tabindex="-1">
-    <canvas class="screen" tabindex="0" aria-label="A pixel-art village. Arrow keys or WASD to move, Enter to interact, B to cycle after finding the bicycle. Meet Squirtle to surf by walking into water."></canvas>
+    <canvas class="screen" tabindex="0" aria-label="A pixel-art village. Arrow keys or WASD to move, Enter to interact, B to cycle after finding the bicycle. Meet Squirtle to surf. Walk into the island cave; ice slides you forward, and the southern doorway leads outside."></canvas>
 
     <div class="hud hud-start">
       <a class="label hud-button" href="/"><span aria-hidden="true">←</span> Home</a>
@@ -22,7 +22,7 @@ const village = loadVillage();
     </div>
 
     <div class="hud hud-details">
-      <span class="label adventure-status" role="status" aria-live="polite">Find Squirtle · Walking · Secrets 0/2</span>
+      <span class="label adventure-status" role="status" aria-live="polite">Find Squirtle · Walking · Secrets 0/3</span>
       <button class="label hud-button" type="button" data-action="bike" aria-pressed="false" hidden>B · Cycle</button>
     </div>
 

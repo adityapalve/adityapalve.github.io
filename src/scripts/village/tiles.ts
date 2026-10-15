@@ -1,9 +1,9 @@
 import { drawText, textWidth } from './font';
 import { makeCanvas, noise, tileSize } from './pixels';
 
-export type Ground = 'grass' | 'path' | 'water' | 'flower';
+export type Ground = 'grass' | 'path' | 'water' | 'flower' | 'cave-floor' | 'cave-wall' | 'ice' | 'waterfall' | 'cave-door' | 'cave-exit';
 
-export type Prop = 'tree' | 'fence' | 'sign';
+export type Prop = 'tree' | 'fence' | 'sign' | 'cave';
 
 /** What hangs over each hut's door: a hint of the work inside. */
 export type Emblem = 'graph' | 'terminal' | 'chart' | 'car';
@@ -42,6 +42,12 @@ function grassBase(context: CanvasRenderingContext2D, tx: number, ty: number): v
 
 /** One ground tile, drawn fresh per map cell so tufts and speckles never repeat visibly. */
 export function drawGround(context: CanvasRenderingContext2D, kind: Ground, tx: number, ty: number, frame: number): void {
+  if (kind === 'cave-floor' || kind === 'cave-wall' || kind === 'ice' || kind === 'waterfall' || kind === 'cave-door' || kind === 'cave-exit') {
+    drawCaveGround(context, kind, tx, ty, frame);
+
+    return;
+  }
+
   if (kind === 'grass' || kind === 'flower') {
     grassBase(context, tx, ty);
 
@@ -88,6 +94,131 @@ export function drawGround(context: CanvasRenderingContext2D, kind: Ground, tx: 
     context.fillRect(x, y, 4, 1);
     context.fillRect(x + 1, y + 1, 2, 1);
   }
+}
+
+/** Original cave textures, baked into the scene's two ground layers. */
+function drawCaveGround(context: CanvasRenderingContext2D, kind: Ground, tx: number, ty: number, frame: number): void {
+  if (kind === 'cave-wall') {
+    context.fillStyle = '#233952';
+    context.fillRect(0, 0, 16, 16);
+
+    for (let row = 0; row < 3; row++) {
+      const top = row * 5;
+      const seam = 3 + Math.floor(noise(tx, ty, row + 100) * 9);
+      context.fillStyle = row === 0 ? '#6088a4' : '#42647f';
+      context.fillRect(0, top, 16, 1);
+      context.fillStyle = '#35536f';
+      context.fillRect(1, top + 1, seam - 1, 3);
+      context.fillStyle = '#4a718c';
+      context.fillRect(seam + 1, top + 1, 15 - seam, 2);
+      context.fillStyle = '#192d45';
+      context.fillRect(seam, top + 1, 1, 4);
+    }
+
+    return;
+  }
+
+  if (kind === 'waterfall') {
+    context.fillStyle = '#377cae';
+    context.fillRect(0, 0, 16, 16);
+
+    for (let streak = 0; streak < 5; streak++) {
+      const x = streak * 3 + 1;
+      const y = (streak * 5 + frame * 7) % 16;
+      context.fillStyle = streak % 2 === 0 ? '#c5f3ff' : '#79cce8';
+      context.fillRect(x, y, 1, 16 - y);
+      context.fillRect(x, 0, 1, Math.max(0, y - 4));
+    }
+
+    context.fillStyle = '#e4fbff';
+    context.fillRect(frame * 2, 13, 5, 2);
+    context.fillRect(8 - frame * 2, 14, 6, 2);
+    context.fillStyle = '#a9e5f5';
+    context.fillRect(3, 11 + frame, 2, 1);
+    context.fillRect(12, 12 - frame, 3, 1);
+
+    return;
+  }
+
+  if (kind === 'cave-door' || kind === 'cave-exit') {
+    context.fillStyle = '#283e55';
+    context.fillRect(0, 0, 16, 16);
+    context.fillStyle = kind === 'cave-exit' ? '#8ed7e8' : '#101f31';
+    context.fillRect(2, 0, 12, 16);
+    context.fillStyle = kind === 'cave-exit' ? '#d5f7ed' : '#0b1423';
+    context.fillRect(4, 0, 8, 13);
+    context.fillStyle = kind === 'cave-exit' ? '#f4ffe9' : '#172b40';
+    context.fillRect(6, 0, 4, 12);
+    context.fillStyle = kind === 'cave-exit' ? '#9bcbd2' : '#4a6273';
+    context.fillRect(2, 14, 12, 2);
+
+    return;
+  }
+
+  context.fillStyle = kind === 'ice' ? '#9dd9e9' : '#697f90';
+  context.fillRect(0, 0, 16, 16);
+
+  if (kind === 'ice') {
+    context.fillStyle = '#c6eff6';
+    context.fillRect(0, 0, 16, 1);
+    context.fillRect(0, 1, 1, 15);
+    context.fillRect(3, 3, 7, 1);
+    context.fillRect(2, 4, 4, 1);
+    context.fillStyle = '#79bace';
+    context.fillRect(0, 15, 16, 1);
+    context.fillRect(15, 0, 1, 16);
+    const crack = 7 + Math.floor(noise(tx, ty, 112) * 4);
+    context.fillRect(crack, 7, 1, 4);
+    context.fillRect(crack - 2, 10, 2, 1);
+    context.fillRect(crack - 3, 11, 1, 3);
+    context.fillStyle = '#e5fbff';
+    context.fillRect(crack + 1, 7, 1, 3);
+    context.fillRect(11, 3, 2, 1);
+  } else {
+    for (let index = 0; index < 5; index++) {
+      const x = Math.floor(noise(tx, ty, index + 120) * 14);
+      const y = Math.floor(noise(ty, tx, index + 130) * 14);
+      context.fillStyle = index % 2 === 0 ? '#536b7f' : '#8297a5';
+      context.fillRect(x, y, 2, 1);
+    }
+  }
+}
+
+/** A hand-pixelled, three-tile blue-rock arch; its bottom centre is the doorway. */
+export function caveSprite(): HTMLCanvasElement {
+  const [canvas, context] = makeCanvas(tileSize * 3, tileSize * 3);
+  const widths = [20, 30, 38, 44, 48, 48, 48, 48];
+
+  for (const [row, width] of widths.entries()) {
+    const x = (48 - width) / 2;
+    const y = row * 6;
+    context.fillStyle = '#24394c';
+    context.fillRect(x, y, width, 6);
+    context.fillStyle = row < 3 ? '#698ca2' : '#45677f';
+    context.fillRect(x + 1, y, width - 2, 2);
+    context.fillStyle = '#36546d';
+    context.fillRect(x + 3, y + 3, width - 6, 2);
+    context.fillStyle = '#1c3045';
+    context.fillRect(x + 6 + (row % 3) * 7, y + 2, 2, 4);
+  }
+
+  context.fillStyle = '#182a3e';
+  context.fillRect(16, 23, 16, 25);
+  context.fillRect(13, 29, 22, 19);
+  context.fillStyle = '#090f1e';
+  context.fillRect(18, 27, 12, 21);
+  context.fillRect(16, 33, 16, 15);
+  context.fillStyle = '#91bdce';
+  context.fillRect(13, 27, 3, 9);
+  context.fillRect(16, 23, 15, 2);
+  context.fillRect(33, 31, 2, 10);
+  context.fillStyle = '#c0e5e9';
+  context.fillRect(8, 12, 8, 1);
+  context.fillRect(30, 17, 7, 1);
+  context.fillStyle = '#6c8999';
+  context.fillRect(14, 46, 20, 2);
+
+  return canvas;
 }
 
 export function treeSprite(variant: number): HTMLCanvasElement {

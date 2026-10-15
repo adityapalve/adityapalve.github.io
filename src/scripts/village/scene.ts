@@ -2,7 +2,7 @@ import { adventureSprites } from './adventure-sprites';
 import { key, mapHeight, mapWidth, type World } from './map';
 import { makeCanvas, tileSize } from './pixels';
 import { characterSprites, npcLooks, playerLook, type Facing } from './sprites';
-import { carSprite, drawGround, fenceSprite, hutSprite, plateHeight, signSprite, stallSprite, treeSprite } from './tiles';
+import { carSprite, caveSprite, drawGround, fenceSprite, hutSprite, plateHeight, signSprite, stallSprite, treeSprite } from './tiles';
 
 /** Positions are world pixels; optional adventure state keeps the home postcard reusable. */
 export type Walker = {
@@ -45,8 +45,9 @@ export function createScene(world: World): Scene {
   const trees = [treeSprite(0), treeSprite(1)];
   const fence = fenceSprite();
   const sign = signSprite();
+  const cave = caveSprite();
   const hutSprites = new Map(world.huts.map((hut) => [hut, hutSprite(hut.roof, hut.data.label, hut.emblem)]));
-  const stall = stallSprite('Projects');
+  const stall = world.workshop === undefined ? undefined : stallSprite('Projects');
   const carSprites = new Map(world.cars.map((car) => [car, carSprite(car.color)]));
   const npcSprites = new Map(world.npcs.map((npc) => [npc, characterSprites(npcLooks[npc.look % npcLooks.length]!)]));
   const playerSprites = characterSprites(playerLook);
@@ -78,7 +79,13 @@ export function createScene(world: World): Scene {
     const companion = walker.mode === 'surf' ? undefined : walker.companion;
     const companionRow = companion === undefined ? -1 : Math.floor(companion.y / tileSize);
 
-    context.clearRect(0, 0, context.canvas.width, context.canvas.height);
+    if (world.area === 'cave') {
+      context.fillStyle = '#192d45';
+      context.fillRect(0, 0, context.canvas.width, context.canvas.height);
+    } else {
+      context.clearRect(0, 0, context.canvas.width, context.canvas.height);
+    }
+
     context.drawImage(ground[frame]!, -camX, -camY);
 
     for (let ty = 0; ty < mapHeight; ty++) {
@@ -86,7 +93,7 @@ export function createScene(world: World): Scene {
         if (hut.ty + 2 === ty) context.drawImage(hutSprites.get(hut)!, hut.tx * tileSize - camX, hut.ty * tileSize - plateHeight - camY);
       }
 
-      if (world.workshop.ty + 1 === ty) {
+      if (world.workshop !== undefined && stall !== undefined && world.workshop.ty + 1 === ty) {
         context.drawImage(stall, world.workshop.tx * tileSize - camX, world.workshop.ty * tileSize - plateHeight - camY);
       }
 
@@ -104,6 +111,7 @@ export function createScene(world: World): Scene {
 
         if (prop.kind === 'tree') context.drawImage(trees[prop.variant % trees.length]!, x, y - 8);
         else if (prop.kind === 'fence') context.drawImage(fence, x, y);
+        else if (prop.kind === 'cave') context.drawImage(cave, x - tileSize, y - tileSize * 2);
         else context.drawImage(sign, x, y);
       }
 

@@ -17,16 +17,25 @@ export type Workshop = { data: WorkshopData; tx: number; ty: number };
 
 export type Npc = { tx: number; ty: number; facing: Facing; look: number } & ({ kind: 'hut'; hut: Hut } | { kind: 'workshop'; workshop: Workshop });
 
+export type Portal = {
+  tx: number;
+  ty: number;
+  to: 'village' | 'cave';
+  arrival: { tx: number; ty: number; facing: Facing };
+};
+
 export type World = {
+  area: 'village' | 'cave';
+  portals: Portal[];
   ground: Ground[][];
   props: Map<string, { kind: Prop; variant: number }>;
   solid: boolean[][];
   huts: Hut[];
-  workshop: Workshop;
+  workshop: Workshop | undefined;
   cars: { tx: number; ty: number; color: string }[];
   npcs: Npc[];
-  sign: { tx: number; ty: number };
-  features: { id: 'starter' | 'bike' | 'shore' | 'island' | 'grove'; title: string; tx: number; ty: number }[];
+  sign: { tx: number; ty: number } | undefined;
+  features: { id: 'starter' | 'bike' | 'shore' | 'island' | 'grove' | 'cave-guide' | 'cave-reward'; title: string; tx: number; ty: number }[];
   start: { tx: number; ty: number };
 };
 
@@ -109,8 +118,21 @@ export function buildWorld(huts: HutData[], workshopData: WorkshopData, roofs: s
   }
 
   for (let x = 37; x <= 41; x++) {
-    for (let y = 12; y <= 17; y++) ground[y]![x] = 'grass';
+    for (let y = 10; y <= 17; y++) ground[y]![x] = 'grass';
   }
+
+  // A rocky ridge caps the island; its central opening is the cave doorway.
+  for (let x = 37; x <= 41; x++) {
+    for (let y = 10; y <= 12; y++) {
+      ground[y]![x] = 'cave-wall';
+      block(x, y);
+    }
+  }
+
+  ground[12]![39] = 'cave-door';
+  solid[12]![39] = false;
+  ground[13]![39] = 'path';
+  props.set(key(39, 12), { kind: 'cave', variant: 0 });
 
   // Huts, their keepers on the doorstep, and the one parked car
   const builtHuts: Hut[] = [];
@@ -210,5 +232,8 @@ export function buildWorld(huts: HutData[], workshopData: WorkshopData, roofs: s
     }
   }
 
-  return { ground, props, solid, huts: builtHuts, workshop, cars, npcs, sign, features, start: { tx: 15, ty: 12 } };
+  return {
+    area: 'village', portals: [{ tx: 39, ty: 12, to: 'cave', arrival: { tx: 10, ty: 24, facing: 'up' } }],
+    ground, props, solid, huts: builtHuts, workshop, cars, npcs, sign, features, start: { tx: 15, ty: 12 },
+  };
 }
