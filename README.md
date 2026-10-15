@@ -88,6 +88,39 @@ The game fills the window. The home page shows a non-interactive postcard of the
 village (`postcard.ts`), and `/experience` renders the full `experience.json` as a plain
 page; both "skip" links point there.
 
+The map also has an eastern lake, a small island, and a southern grove:
+
+- **Companion:** face Squirtle northwest of the plaza and press Enter (or touch A).
+  Squirtle joins you and follows one tile behind on land.
+- **Bicycle:** collect the bicycle west of the plaza. Press B or the Cycle button to
+  toggle faster land travel. Entering water dismounts the bicycle.
+- **Surf:** with Squirtle, walk into water to surf. Walk onto land to come ashore.
+  Without Squirtle, water blocks movement; interact with it for a hint.
+- **Secrets:** read the island lookout and grove signs to discover two hidden messages.
+  Re-reading a sign does not increase the discovery count.
+
+Movement uses arrows or WASD; Enter, Space, E, or Z interacts; Escape closes dialogue.
+Touch controls provide a d-pad and A, plus a Cycle button after collecting the bike.
+Companion, bicycle, and discovery progress last for the current visit and reset on reload.
+
+#### Reusing the game with p5.js
+
+The current renderer uses Canvas 2D, not p5.js. A p5 migration does not require rebuilding
+the whole game:
+
+- `map.ts` owns terrain, obstacles, buildings, and discoverable locations.
+- `adventure.ts` owns movement, collision, companion following, unlocks, and travel modes,
+  without DOM or drawing dependencies.
+- `sprites.ts`, `tiles.ts`, and `adventure-sprites.ts` generate cached canvas sprites.
+- `dialog.ts` and the page's HTML HUD can stay outside the sketch, keeping text and
+  controls accessible.
+
+Use a p5 **instance-mode** sketch for this page. Its `draw` loop can update the adventure
+and pass its Canvas 2D `drawingContext` to `createScene().draw`, reusing the existing art.
+The canvas creation/sizing, input binding, timing, and sketch teardown need adapting;
+the Astro markup is not itself a p5 component. The home postcard already shares the
+world and renderer and remains non-interactive.
+
 ## Checks
 
 ```bash

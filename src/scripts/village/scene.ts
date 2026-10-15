@@ -1,10 +1,19 @@
+import { adventureSprites } from './adventure-sprites';
 import { key, mapHeight, mapWidth, type World } from './map';
 import { makeCanvas, tileSize } from './pixels';
 import { characterSprites, npcLooks, playerLook, type Facing } from './sprites';
 import { carSprite, drawGround, fenceSprite, hutSprite, plateHeight, signSprite, stallSprite, treeSprite } from './tiles';
 
-/** The player as drawn this frame, in world pixels. `frame` 0 stands, 1 and 2 walk. */
-export type Walker = { x: number; y: number; facing: Facing; frame: number };
+/** Positions are world pixels; optional adventure state keeps the home postcard reusable. */
+export type Walker = {
+  x: number;
+  y: number;
+  facing: Facing;
+  frame: number;
+  mode?: 'walk' | 'bike' | 'surf';
+  companion?: { x: number; y: number; facing: Facing; frame: number };
+  bikeUnlocked?: boolean;
+};
 
 export type Scene = { draw: (context: CanvasRenderingContext2D, camX: number, camY: number, seconds: number, walker: Walker) => void };
 
@@ -41,12 +50,33 @@ export function createScene(world: World): Scene {
   const carSprites = new Map(world.cars.map((car) => [car, carSprite(car.color)]));
   const npcSprites = new Map(world.npcs.map((npc) => [npc, characterSprites(npcLooks[npc.look % npcLooks.length]!)]));
   const playerSprites = characterSprites(playerLook);
+  const adventure = adventureSprites(playerSprites);
+
+  const drawPlayer = (context: CanvasRenderingContext2D, walker: Walker, camX: number, camY: number, ripple: number) => {
+    const x = Math.round(walker.x) - camX;
+    const y = Math.round(walker.y) - camY;
+
+    if (walker.mode === 'surf') {
+      context.drawImage(adventure.wake[ripple]!, x - 4, y + 2);
+      context.drawImage(adventure.surfing.get(walker.facing)![walker.frame]!, x - 4, y - 8);
+    } else if (walker.mode === 'bike') {
+      context.drawImage(adventure.cycling.get(walker.facing)![walker.frame]!, x - 4, y - 8);
+    } else {
+      context.drawImage(playerSprites.get(walker.facing)![walker.frame]!, x, y - 2);
+    }
+  };
+
+  const drawCompanion = (context: CanvasRenderingContext2D, companion: NonNullable<Walker['companion']>, camX: number, camY: number) => {
+    context.drawImage(adventure.squirtle[companion.facing][companion.frame]!, Math.round(companion.x) - camX, Math.round(companion.y) - camY);
+  };
 
   // Row by row, so things lower on the map paint over things above them
   const draw: Scene['draw'] = (context, camX, camY, seconds, walker) => {
     const frame = Math.floor(seconds * 1.6) % 2;
     const bob = Math.floor(seconds * 1.25) % 2;
-    const walkerRow = Math.round(walker.y / tileSize);
+    const walkerRow = Math.floor(walker.y / tileSize);
+    const companion = walker.mode === 'surf' ? undefined : walker.companion;
+    const companionRow = companion === undefined ? -1 : Math.floor(companion.y / tileSize);
 
     context.clearRect(0, 0, context.canvas.width, context.canvas.height);
     context.drawImage(ground[frame]!, -camX, -camY);
@@ -77,6 +107,19 @@ export function createScene(world: World): Scene {
         else context.drawImage(sign, x, y);
       }
 
+      for (const feature of world.features) {
+        if (feature.ty !== ty) continue;
+
+        const x = feature.tx * tileSize - camX;
+        const y = feature.ty * tileSize - camY;
+
+        if (feature.id === 'starter') {
+          if (walker.companion === undefined) context.drawImage(adventure.squirtle.down[0]!, x, y - bob);
+        } else if (feature.id === 'bike') {
+          if (!walker.bikeUnlocked) context.drawImage(adventure.bike.left, x - 4, y + 4);
+        }
+      }
+
       for (const npc of world.npcs) {
         if (npc.ty !== ty) continue;
 
@@ -85,11 +128,11 @@ export function createScene(world: World): Scene {
         context.drawImage(sprite, npc.tx * tileSize - camX, npc.ty * tileSize - camY - bob);
       }
 
-      if (ty === walkerRow) {
-        const sprite = playerSprites.get(walker.facing)![walker.frame]!;
+      if (companion !== undefined && ty === companionRow && companion.y <= walker.y) drawCompanion(context, companion, camX, camY);
 
-        context.drawImage(sprite, Math.round(walker.x) - camX, Math.round(walker.y) - camY - 2);
-      }
+      if (ty === walkerRow) drawPlayer(context, walker, camX, camY, frame);
+
+      if (companion !== undefined && ty === companionRow && companion.y > walker.y) drawCompanion(context, companion, camX, camY);
     }
   };
 

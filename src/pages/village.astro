@@ -5,11 +5,11 @@ import { loadVillage } from '../lib/village';
 const village = loadVillage();
 ---
 
-<BaseLayout title="The village – Aditya Palve" description="Walk around a small village and talk to four keepers about what I've built." bleed>
+<BaseLayout title="The village – Aditya Palve" description="Explore a pixel-art village, meet Squirtle, find a bicycle, and surf to a secret island." bleed>
   <h1 class="visually-hidden">The village</h1>
 
   <div class="game" tabindex="-1">
-    <canvas class="screen" tabindex="0" aria-label="A pixel-art village. Use the arrow keys to walk to the huts and Enter to talk."></canvas>
+    <canvas class="screen" tabindex="0" aria-label="A pixel-art village. Arrow keys or WASD to move, Enter to interact, B to cycle after finding the bicycle. Meet Squirtle to surf by walking into water."></canvas>
 
     <div class="hud hud-start">
       <a class="label hud-button" href="/"><span aria-hidden="true">←</span> Home</a>
@@ -21,11 +21,17 @@ const village = loadVillage();
       <a class="label hud-button" href="/experience">Skip <span aria-hidden="true">▸▸</span></a>
     </div>
 
-    <p class="label prompt" hidden><span class="for-keys">Press Enter</span><span class="for-touch">Press A</span> to talk</p>
+    <div class="hud hud-details">
+      <span class="label adventure-status" role="status" aria-live="polite">Find Squirtle · Walking · Secrets 0/2</span>
+      <button class="label hud-button" type="button" data-action="bike" aria-pressed="false" hidden>B · Cycle</button>
+    </div>
+
+    <p class="label prompt" hidden><span class="for-keys">Press Enter</span><span class="for-touch">Press A</span> to interact</p>
 
     <button class="start" type="button">
       <span class="for-keys">Click to start</span><span class="for-touch">Tap to start</span>
-      <span class="label"><span class="for-keys">arrow keys · enter</span><span class="for-touch">d-pad · A</span></span>
+      <span class="label"><span class="for-keys">arrows / WASD · enter · B to cycle</span><span class="for-touch">d-pad · A · Cycle button</span></span>
+      <span class="label">Meet Squirtle · find a bicycle · explore the lake</span>
     </button>
 
     <div class="pad" aria-label="Touch controls">
@@ -86,6 +92,22 @@ const village = loadVillage();
     justify-content: flex-end;
   }
 
+  .hud-details {
+    top: 3.25rem;
+    left: 0.75rem;
+    right: 0.75rem;
+    align-items: center;
+  }
+
+  .hud-button[hidden] {
+    display: none;
+  }
+
+  .hud-button:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+
   .hud > * {
     padding: 0.35rem 0.6rem;
     border-radius: 4px;
@@ -126,7 +148,7 @@ const village = loadVillage();
   .prompt {
     position: absolute;
     left: 50%;
-    top: 3.25rem;
+    top: 6rem;
     translate: -50% 0;
     margin: 0;
     padding: 0.3rem 0.55rem;
@@ -257,6 +279,10 @@ const village = loadVillage();
 
     .for-touch {
       display: inline;
+    }
+
+    .prompt {
+      top: 10rem;
     }
 
     .pad {
