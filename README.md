@@ -88,6 +88,45 @@ The game fills the window. The home page shows a non-interactive postcard of the
 village (`postcard.ts`), and `/experience` renders the full `experience.json` as a plain
 page; both "skip" links point there.
 
+The map also has an eastern lake, a small island, and a southern grove:
+
+- **Companion:** face Squirtle northwest of the plaza and press Enter (or touch A).
+  Squirtle joins you and follows one tile behind on land.
+- **Bicycle:** collect the bicycle west of the plaza. Press B or the Cycle button to
+  toggle faster land travel. Entering water dismounts the bicycle.
+- **Surf:** with Squirtle, walk into water to surf. Walk onto land to come ashore.
+  Without Squirtle, water blocks movement; interact with it for a hint.
+- **Frostfall Cave:** surf to the island and walk into the opening in its northern ridge.
+  This original Icefall-inspired cavern has sliding ice, rocky stopping points, an animated
+  waterfall, and a surfable pool. On ice you keep moving straight until reaching dry ground
+  or an obstacle; after stopping, choose another direction. Bicycles stay dismounted inside.
+  Walk through the glowing southern doorway to return to the island. Your companion,
+  bicycle, visited huts, and discoveries are retained when changing areas.
+- **Secrets:** read the island lookout, grove, and frozen chamber signs to discover three
+  hidden messages. Re-reading a sign does not increase the discovery count.
+
+Movement uses arrows or WASD; Enter, Space, E, or Z interacts; Escape closes dialogue.
+Touch controls provide a d-pad and A, plus a Cycle button after collecting the bike.
+Companion, bicycle, and discovery progress last for the current visit and reset on reload.
+
+#### Reusing the game with p5.js
+
+The current renderer uses Canvas 2D, not p5.js. A p5 migration does not require rebuilding
+the whole game:
+
+- `map.ts` owns village terrain and locations; `cave-map.ts` defines the cave interior.
+- `adventure.ts` owns movement, collision, companion following, unlocks, ice sliding,
+  and area-transition state, without DOM or drawing dependencies.
+- `sprites.ts`, `tiles.ts`, and `adventure-sprites.ts` generate cached canvas sprites.
+- `dialog.ts` and the page's HTML HUD can stay outside the sketch, keeping text and
+  controls accessible.
+
+Use a p5 **instance-mode** sketch for this page. Its `draw` loop can update the adventure
+and pass its Canvas 2D `drawingContext` to `createScene().draw`, reusing the existing art.
+The canvas creation/sizing, input binding, timing, and sketch teardown need adapting;
+the Astro markup is not itself a p5 component. The home postcard already shares the
+world and renderer and remains non-interactive.
+
 ## Checks
 
 ```bash
