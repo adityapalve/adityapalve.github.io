@@ -177,7 +177,7 @@ The second picker swaps the reading face, and is meant for comparing rather than
 
 | Value | Family |
 | :---- | :----- |
-| `areal` | ABC Areal, falling back to Helvetica where it is not served — the default |
+| `areal` | ABC Areal, the default |
 | `georgia` | The serif stack the site used before, for a calmer long-form voice |
 | `mono` | Paper Mono throughout, the way it is meant for long-form text |
 
@@ -196,31 +196,39 @@ on `<html>` and the storage key, and the select's own options are its values.
 | :-- | :-- | :-- |
 | Family | ABC Areal (variable, `wght` 400–700, `slnt`, `DRKM`) | Paper Mono (variable, `wght` 100–800) |
 | Licence | Free from Dinamo | SIL OFL |
-| In this repo | No — see below | Yes, `public/fonts/paper-mono/` |
+| In this repo | Yes, `public/fonts/areal/` | Yes, `public/fonts/paper-mono/` |
 
-**Paper Mono** is OFL, so its woff2 is committed and served by the deployed site.
+**Paper Mono** is OFL, so it is committed and served without a caveat.
 
-**ABC Areal** is free, but Dinamo's [licence](https://abcdinamo.com/licenses) forbids putting the
-binaries in public repositories or on public servers, and this repository is public. So Areal is
-not committed:
+**ABC Areal** is free from Dinamo, but their [licence](https://abcdinamo.com/licenses) bars putting
+the binaries in public repositories or on public servers. This repository is public and served by
+GitHub Pages, so committing the subset is exactly what that clause is about: a risk knowingly
+accepted for a personal site, not a reading of the licence. Everything else here follows the terms,
+and removing it again is two edits — the files plus the links in the layout.
 
 - `scripts/sync-fonts.mjs` subsets the copy installed on this machine
   (`~/Library/Fonts/ABCArealVariable.ttf`, override with `AREAL_FONT=`) into
-  `public/fonts/areal/`, which is gitignored. It runs automatically before `npm run dev`.
-- The layout only links that stylesheet when the file is there, so the deployed build makes no
-  request for it at all and the stack falls back to Helvetica/Arial — which is what Areal is a
-  redraw of, so the site degrades almost identically.
+  `public/fonts/areal/`, and writes the `@font-face` stylesheet beside it. It runs automatically
+  before `npm run dev`, and only rebuilds when the local source is newer than the subset, so a
+  clone without the font still builds against what is committed.
 - Download it from [abcdinamo.com/free/areal](https://abcdinamo.com/free/areal) if it is not
-  installed. Subsetting needs `pip install fonttools brotli`; without it the script warns and
-  the site falls back.
+  installed. Subsetting needs `pip install fonttools brotli`; without it the script keeps the
+  committed subset and warns.
+
+The layout links the stylesheet unconditionally; if the request fails the stack falls back to
+Helvetica/Arial, which is what Areal is a redraw of, so the site degrades almost identically.
 
 ## Icons
 
-`npm run icons` regenerates `public/favicon.svg` and `public/apple-touch-icon.png` from one
-16×16 pixel grid in [`scripts/make-icons.mjs`](scripts/make-icons.mjs) — a hut from the village,
-drawn in code like the rest of the art. The tab icon is a silhouette that flips for
-`prefers-color-scheme`; the touch icon is the same hut inset on opaque paper, because a
-transparent icon reads as a hole on the home screen.
+`npm run icons` regenerates `public/favicon.svg` and `public/apple-touch-icon.png` from one set of
+shapes in [`scripts/make-icons.mjs`](scripts/make-icons.mjs), drawn in code like the rest of the
+art: a roof and a sun, printed like a two-drum riso job in Riso Teal and Riso Orange on paper, the
+second drum a little off register so the overlap multiplies darker.
+
+The tab icon is a single flat SVG with the paper tile included, so it reads the same in light and
+dark browser chrome and needs no `prefers-color-scheme` rule. The touch icon is the same print at
+180×180, opaque and full bleed: iOS rounds the corners itself and fills transparency with black.
+At that size there is also room for the riso grain a 16px tab cannot hold.
 
 ## Checks
 
