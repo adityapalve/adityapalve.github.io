@@ -10,7 +10,9 @@
     "lint": "oxlint",
     "lint:fix": "oxlint --fix",
     "check": "astro check",
-    "predev": "node scripts/import-photos.mjs",
+    "icons": "node scripts/make-icons.mjs",
+    "fonts:sync": "node scripts/sync-fonts.mjs",
+    "predev": "node scripts/import-photos.mjs && node scripts/sync-fonts.mjs",
     "prebuild": "node scripts/import-photos.mjs",
     "photos:import": "node scripts/import-photos.mjs",
     "notes:publish": "node scripts/publish.mjs"

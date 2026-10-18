@@ -12,6 +12,10 @@ A minimal, text-first personal website built with [Astro](https://astro.build).
 - **Footpaths** – Map of places I've visited, generated from photo EXIF data
 - **Contact** – Ways to get in touch
 
+The type is [ABC Areal](https://abcdinamo.com/typefaces/areal) for text and
+[Paper Mono](https://paper.design/mono) for labels and code. Both the palette and the typeface
+can be changed from the pickers in the footer.
+
 ## Development
 
 ```bash
@@ -127,6 +131,80 @@ The canvas creation/sizing, input binding, timing, and sketch teardown need adap
 the Astro markup is not itself a p5 component. The home postcard already shares the
 world and renderer and remains non-interactive.
 
+## Themes
+
+Themes are tokens on `<html data-theme>`, defined at the top of
+[`src/layouts/BaseLayout.astro`](src/layouts/BaseLayout.astro):
+
+| Value | What it is |
+| :---- | :--------- |
+| *(no attribute)* | Follows `prefers-color-scheme`; what you get with JavaScript off |
+| `light` / `dark` | Porcelain, and ink for reading at night |
+| `paper` | Warm stock and iron-gall ink — the village textbox, the book spines |
+| `frostfall` | The cave, the waterfall, and the lake at night |
+| `gameboy` | The four DMG greens, in the order Nintendo named them |
+| `terminal` | Phosphor on a tube, for the pages that are mostly mono |
+
+A theme only moves five tokens: `--color-bg`, `--color-text`, `--color-muted`, `--color-link`
+and `--color-link-hover`, plus `--font-body-variation` for Areal's `DRKM` axis. Code fills,
+card rings, drop shadows and image edges are all mixed from `--color-text` in `:root`, so a new
+theme gets correct depth for free — add one block and an `<option>` in the picker and it works.
+
+The picker in the footer writes to `localStorage`, and a small inline script in the `<head>`
+puts the remembered value on `<html>` before the first frame so there is no light flash. It also
+pins `<meta name="theme-color">` so the browser chrome matches.
+
+## Type
+
+The second picker swaps the reading face, and is meant for comparing rather than for visitors:
+
+| Value | Family |
+| :---- | :----- |
+| `areal` | ABC Areal, falling back to Helvetica where it is not served — the default |
+| `georgia` | The serif stack the site used before, for a calmer long-form voice |
+| `mono` | Paper Mono throughout, the way it is meant for long-form text |
+
+`mono` turns on `ss02` (Duospace glyphs) and `ss03` (Narrow space) via `--font-body-features`.
+Paper Mono ships those for exactly this: duospacing narrows the wide glyphs so a paragraph of mono
+stops reading as a table of cells, while everything stays on a grid. It fits around 55 characters
+per line at this measure, against 52 without.
+
+Adding a picker is markup only: the `preferences` list in the layout renders the `<select>`, and
+`src/scripts/preferences.ts` takes the rest from it — the `id` becomes both the `data-` attribute
+on `<html>` and the storage key, and the select's own options are its values.
+
+## Fonts
+
+| | Text | Labels, code, numbers |
+| :-- | :-- | :-- |
+| Family | ABC Areal (variable, `wght` 400–700, `slnt`, `DRKM`) | Paper Mono (variable, `wght` 100–800) |
+| Licence | Free from Dinamo | SIL OFL |
+| In this repo | No — see below | Yes, `public/fonts/paper-mono/` |
+
+**Paper Mono** is OFL, so its woff2 is committed and served by the deployed site.
+
+**ABC Areal** is free, but Dinamo's [licence](https://abcdinamo.com/licenses) forbids putting the
+binaries in public repositories or on public servers, and this repository is public. So Areal is
+not committed:
+
+- `scripts/sync-fonts.mjs` subsets the copy installed on this machine
+  (`~/Library/Fonts/ABCArealVariable.ttf`, override with `AREAL_FONT=`) into
+  `public/fonts/areal/`, which is gitignored. It runs automatically before `npm run dev`.
+- The layout only links that stylesheet when the file is there, so the deployed build makes no
+  request for it at all and the stack falls back to Helvetica/Arial — which is what Areal is a
+  redraw of, so the site degrades almost identically.
+- Download it from [abcdinamo.com/free/areal](https://abcdinamo.com/free/areal) if it is not
+  installed. Subsetting needs `pip install fonttools brotli`; without it the script warns and
+  the site falls back.
+
+## Icons
+
+`npm run icons` regenerates `public/favicon.svg` and `public/apple-touch-icon.png` from one
+16×16 pixel grid in [`scripts/make-icons.mjs`](scripts/make-icons.mjs) — a hut from the village,
+drawn in code like the rest of the art. The tab icon is a silhouette that flips for
+`prefers-color-scheme`; the touch icon is the same hut inset on opaque paper, because a
+transparent icon reads as a hole on the home screen.
+
 ## Checks
 
 ```bash
@@ -152,6 +230,8 @@ The original Quartz-based site is preserved in the `stash/` folder.
 | `npm run dev`             | Starts local dev server at `localhost:4321`      |
 | `npm run build`           | Build your production site to `./dist/`          |
 | `npm run preview`         | Preview your build locally, before deploying     |
+| `npm run fonts:sync`      | Rebuild the web fonts from the installed copies  |
+| `npm run icons`           | Regenerate the favicon and touch icon            |
 | `npm run astro ...`       | Run CLI commands like `astro add`, `astro check` |
 | `npm run astro -- --help` | Get help using the Astro CLI                     |
 

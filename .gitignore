@@ -17,6 +17,11 @@ pnpm-debug.log*
 .env
 .env.production
 
+# ABC Areal is free, but Dinamo's licence bars public repositories and public servers.
+# `npm run fonts:sync` builds it here from the copy installed on this machine; the deployed
+# site falls back to Helvetica. See the Fonts section of the README.
+public/fonts/areal/
+
 # macOS-specific files
 .DS_Store
 

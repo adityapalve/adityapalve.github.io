@@ -1,4 +1,6 @@
 ---
+import { existsSync } from 'node:fs';
+
 interface Props {
   title: string;
   description?: string;
@@ -7,6 +9,44 @@ interface Props {
 }
 
 const { title, description = "Aditya Palve's personal website", bleed = false } = Astro.props;
+
+/*
+  ABC Areal is not ours to redistribute: Dinamo's licence bars public repositories and public
+  servers. `scripts/sync-fonts.mjs` writes it into a gitignored folder, so it is present on this
+  machine and absent from the deployed build, where the stack falls back to Helvetica — the face
+  Areal is a redraw of. Paper Mono is OFL, so it ships.
+*/
+const hasAreal = existsSync(new URL('../../public/fonts/areal/areal.css', import.meta.url));
+
+/*
+  The footer pickers. Each entry becomes a <select> whose id doubles as the `data-` attribute on
+  <html> and as its key in the stored preferences, so `src/scripts/preferences.ts` needs no list
+  of its own. The first option of each is what a fresh visitor gets.
+*/
+const preferences = [
+  {
+    key: 'theme',
+    label: 'theme',
+    options: [
+      ['auto', 'system'],
+      ['light', 'light'],
+      ['dark', 'dark'],
+      ['paper', 'paper'],
+      ['frostfall', 'frostfall'],
+      ['gameboy', 'game boy'],
+      ['terminal', 'terminal'],
+    ],
+  },
+  {
+    key: 'type',
+    label: 'type',
+    options: [
+      ['areal', 'areal'],
+      ['georgia', 'georgia'],
+      ['mono', 'paper mono'],
+    ],
+  },
+];
 ---
 
 <!doctype html>
@@ -14,9 +54,32 @@ const { title, description = "Aditya Palve's personal website", bleed = false } 
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light dark" />
     <meta name="description" content={description} />
+    <!-- Chrome colour follows the theme; the picker swaps this for the custom ones -->
+    <meta name="theme-color" content="#fafafa" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#111111" media="(prefers-color-scheme: dark)" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    {hasAreal && <link rel="stylesheet" href="/fonts/areal/areal.css" />}
+    <link rel="preload" href="/fonts/paper-mono/PaperMono-Variable.woff2" as="font" type="font/woff2" crossorigin />
+    {hasAreal && <link rel="preload" href="/fonts/areal/ABC-Areal-Variable.woff2" as="font" type="font/woff2" crossorigin />}
     <title>{title}</title>
+    <script is:inline type="application/json" id="preferences" set:html={JSON.stringify(preferences.map((preference) => preference.key))} />
+    <script is:inline>
+      // Paint the remembered theme and type before the first frame so there is no light flash.
+      try {
+        const keys = JSON.parse(document.getElementById('preferences')?.textContent ?? '[]');
+
+        for (const key of keys) {
+          const value = localStorage.getItem(key);
+
+          if (value !== null) document.documentElement.dataset[key] = value;
+        }
+      } catch {
+        // Storage unavailable or unreadable: the defaults in CSS stand
+      }
+    </script>
   </head>
   <body class:list={{ bleed }}>
     <main>
@@ -24,55 +87,169 @@ const { title, description = "Aditya Palve's personal website", bleed = false } 
     </main>
     {!bleed && (
       <nav>
-        <a href="/">home</a> • 
-        <a href="/village">experience</a> • 
-        <a href="/writing">writing</a> • 
-        <a href="/bookshelf">bookshelf</a> • 
-        <a href="/footpaths">footpaths</a> • 
-        <a href="/contact">contact</a>
+        <p class="links">
+          <a href="/">home</a> • 
+          <a href="/village">experience</a> • 
+          <a href="/writing">writing</a> • 
+          <a href="/bookshelf">bookshelf</a> • 
+          <a href="/footpaths">footpaths</a> • 
+          <a href="/contact">contact</a>
+        </p>
+        <div class="controls">
+          {preferences.map((preference) => (
+            <p class="control">
+              <label for={preference.key}>{preference.label}</label>
+              <span class="picker">
+                <select id={preference.key}>
+                  {preference.options.map(([value, label]) => <option value={value}>{label}</option>)}
+                </select>
+              </span>
+            </p>
+          ))}
+        </div>
       </nav>
     )}
   </body>
 </html>
 
 <style is:global>
+  /*
+    Type. ABC Areal carries the reading text; Paper Mono carries the labels, code and numbers.
+    Both are variable, so weights come from `font-weight` alone. Areal also has a DRKM axis
+    ("dark mode") that thickens the strokes slightly for light-on-dark text — each dark theme
+    turns it on, and fonts without the axis ignore it.
+  */
   :root {
-    --font-body: 'Georgia', 'Times New Roman', serif;
-    --font-mono: 'SF Mono', 'Menlo', monospace;
-    --color-bg: #fafafa;
-    --color-text: #1a1a1a;
-    --color-muted: #666;
-    --color-link: #0066cc;
-    --color-link-hover: #004499;
+    --font-body: 'ABC Areal', 'Helvetica Neue', Helvetica, Arial, ui-sans-serif, system-ui, sans-serif;
+    --font-mono: 'Paper Mono', 'SF Mono', Menlo, ui-monospace, monospace;
+    --font-body-variation: 'DRKM' 0;
+    --font-body-features: normal;
+
     --max-width: 640px;
 
     /* Motion: one strong ease-out for every UI transition */
     --ease-out: cubic-bezier(0.2, 0, 0, 1);
 
-    /* Depth: layered shadow acts as a 1px border ring plus lift */
+    /* Porcelain: the default, and what a no-JS system-light visitor gets */
+    color-scheme: light;
+    --color-bg: #fafafa;
+    --color-text: #1a1a1a;
+    --color-muted: #666;
+    --color-link: #0066cc;
+    --color-link-hover: #004499;
+
+    /*
+      Depth and fills are mixed from the ink rather than declared per theme, so light ink on a
+      dark theme reads as a ring and a lift instead of an invisible black shadow.
+    */
+    --color-code-bg: color-mix(in oklab, var(--color-text) 8%, transparent);
+    /* Opaque fill for surfaces that sit behind something else, like the map before it loads */
+    --color-surface: color-mix(in oklab, var(--color-text) 12%, var(--color-bg));
+    /* Image edge: pure ink at low alpha, never a tinted neutral */
+    --outline-image: color-mix(in oklab, var(--color-text) 10%, transparent);
     --shadow-border:
-      0 0 0 1px oklch(0 0 0 / 0.06),
-      0 1px 2px -1px oklch(0 0 0 / 0.06),
-      0 2px 4px 0 oklch(0 0 0 / 0.04);
+      0 0 0 1px color-mix(in oklab, var(--color-text) 7%, transparent),
+      0 1px 2px -1px color-mix(in oklab, var(--color-text) 6%, transparent),
+      0 2px 4px 0 color-mix(in oklab, var(--color-text) 4%, transparent);
     --shadow-border-hover:
-      0 0 0 1px oklch(0 0 0 / 0.08),
-      0 1px 2px -1px oklch(0 0 0 / 0.08),
-      0 2px 4px 0 oklch(0 0 0 / 0.06);
-    /* Image edge: pure black/white at low opacity, never a tinted neutral */
-    --outline-image: oklch(0 0 0 / 0.1);
+      0 0 0 1px color-mix(in oklab, var(--color-text) 10%, transparent),
+      0 1px 2px -1px color-mix(in oklab, var(--color-text) 9%, transparent),
+      0 2px 4px 0 color-mix(in oklab, var(--color-text) 7%, transparent);
   }
 
+  /* No attribute means "follow the system"; any attribute means the visitor chose */
   @media (prefers-color-scheme: dark) {
-    :root {
+    html:not([data-theme]),
+    html[data-theme='auto'] {
+      color-scheme: dark;
+      --font-body-variation: 'DRKM' 1;
       --color-bg: #111;
       --color-text: #e0e0e0;
       --color-muted: #888;
       --color-link: #6db3f2;
       --color-link-hover: #a8d4ff;
-      --shadow-border: 0 0 0 1px oklch(1 0 0 / 0.08);
-      --shadow-border-hover: 0 0 0 1px oklch(1 0 0 / 0.13);
-      --outline-image: oklch(1 0 0 / 0.1);
     }
+  }
+
+  /* Ink: a smoked near-black with a blue cast, for reading at night */
+  html[data-theme='dark'] {
+    color-scheme: dark;
+    --font-body-variation: 'DRKM' 1;
+    --color-bg: #111;
+    --color-text: #e0e0e0;
+    --color-muted: #888;
+    --color-link: #6db3f2;
+    --color-link-hover: #a8d4ff;
+  }
+
+  /* Paper: the village textbox and the book spines — warm stock, iron-gall ink */
+  html[data-theme='paper'] {
+    color-scheme: light;
+    --color-bg: #f4ecdd;
+    --color-text: #2b2118;
+    --color-muted: #7b6a55;
+    --color-link: #96502b;
+    --color-link-hover: #6f3818;
+  }
+
+  /* Frostfall: the cave, the waterfall and the lake at night */
+  html[data-theme='frostfall'] {
+    color-scheme: dark;
+    --font-body-variation: 'DRKM' 1;
+    --color-bg: #0d1a21;
+    --color-text: #d7e7f0;
+    --color-muted: #86a2b1;
+    --color-link: #74cdea;
+    --color-link-hover: #aee6f7;
+  }
+
+  /* Game Boy: the four DMG greens, in the order Nintendo named them */
+  html[data-theme='gameboy'] {
+    color-scheme: light;
+    --color-bg: #9bbc0f;
+    --color-text: #0f380f;
+    --color-muted: #3c6b2c;
+    --color-link: #0f380f;
+    --color-link-hover: #306230;
+  }
+
+  /* Terminal: phosphor on a tube, for the pages that are mostly mono */
+  html[data-theme='terminal'] {
+    color-scheme: dark;
+    --font-body-variation: 'DRKM' 1;
+    --color-bg: #070a08;
+    --color-text: #b6f2c6;
+    --color-muted: #4f7f61;
+    --color-link: #7dffab;
+    --color-link-hover: #d0ffdd;
+  }
+
+  /*
+    Type. Areal is the default and the only one with a `DRKM` axis, so only these blocks change
+    the family; the themes keep owning the variation settings.
+  */
+
+  /* Georgia: the site before Areal, and a calmer voice for long pieces */
+  html[data-type='georgia'] {
+    --font-body: Georgia, 'Times New Roman', serif;
+  }
+
+  /*
+    Paper Mono throughout, the way it is meant for long-form text: `ss02` duospaces the wide
+    glyphs so a paragraph of mono stops looking like a table of cells. `ss03` narrows the space
+    itself, which duospacing leaves as the one remaining gap.
+  */
+  html[data-type='mono'] {
+    --font-body: var(--font-mono);
+    --font-body-features: 'ss02' 1, 'ss03' 1;
+  }
+
+  @font-face {
+    font-family: 'Paper Mono';
+    src: url('/fonts/paper-mono/PaperMono-Variable.woff2') format('woff2');
+    font-weight: 100 800;
+    font-style: normal;
+    font-display: swap;
   }
 
   * {
@@ -90,6 +267,8 @@ const { title, description = "Aditya Palve's personal website", bleed = false } 
 
   body {
     font-family: var(--font-body);
+    font-variation-settings: var(--font-body-variation);
+    font-feature-settings: var(--font-body-features);
     background-color: var(--color-bg);
     color: var(--color-text);
     max-width: var(--max-width);
@@ -122,6 +301,61 @@ const { title, description = "Aditya Palve's personal website", bleed = false } 
     text-decoration: none;
   }
 
+  /* The pickers read as a caption under the links, in the label voice */
+  nav .controls {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.5rem 1.75rem;
+    margin-top: 1.25rem;
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--color-muted);
+  }
+
+  nav .control {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+  }
+
+  nav .picker {
+    position: relative;
+    display: inline-flex;
+  }
+
+  nav .picker::after {
+    content: '';
+    position: absolute;
+    right: 0.45em;
+    top: 50%;
+    translate: 0 -55%;
+    border-left: 0.24em solid transparent;
+    border-right: 0.24em solid transparent;
+    border-top: 0.26em solid currentColor;
+    pointer-events: none;
+  }
+
+  nav select {
+    appearance: none;
+    padding: 0.15rem 1.3em 0.15rem 0.1rem;
+    border: 0;
+    border-radius: 3px;
+    background: none;
+    color: var(--color-text);
+    font: inherit;
+    letter-spacing: inherit;
+    text-transform: inherit;
+    cursor: pointer;
+  }
+
+  nav select:focus-visible {
+    outline: 2px solid var(--color-link);
+    outline-offset: 2px;
+  }
+
   a {
     color: var(--color-link);
     text-decoration: none;
@@ -150,6 +384,10 @@ const { title, description = "Aditya Palve's personal website", bleed = false } 
     nav a:hover {
       color: var(--color-text);
       text-decoration: none;
+    }
+
+    nav select:hover {
+      color: var(--color-text);
     }
   }
 
@@ -195,7 +433,7 @@ const { title, description = "Aditya Palve's personal website", bleed = false } 
   code {
     font-family: var(--font-mono);
     font-size: 0.85em;
-    background: rgba(128, 128, 128, 0.1);
+    background: var(--color-code-bg);
     padding: 0.2em 0.4em;
     border-radius: 3px;
   }
@@ -232,7 +470,7 @@ const { title, description = "Aditya Palve's personal website", bleed = false } 
     padding: 1rem;
     overflow-x: auto;
     border-radius: 6px;
-    background: rgba(128, 128, 128, 0.1);
+    background: var(--color-code-bg);
     font-size: 0.85em;
     line-height: 1.5;
   }
@@ -257,3 +495,9 @@ const { title, description = "Aditya Palve's personal website", bleed = false } 
     font-size: 0.85rem;
   }
 </style>
+
+<script>
+  import { loadPreferences } from '../scripts/preferences';
+
+  loadPreferences();
+</script>
