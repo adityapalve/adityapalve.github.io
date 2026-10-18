@@ -399,9 +399,13 @@ const village = loadVillage();
   };
 
   if (root !== null && canvas !== null) {
+    // `?ghost=3` puts a few stand-in visitors in the village, to see them drawn without a server
+    const requested = Number(new URLSearchParams(window.location.search).get('ghost') ?? '');
+    const ghosts = Number.isFinite(requested) ? Math.min(Math.max(Math.trunc(requested), 0), 6) : 0;
+
     const { music } = startVillage(root, canvas, data, (visited, total) => {
       if (progress !== null) progress.textContent = visited === total ? `All ${total} huts visited` : `Huts ${visited}/${total}`;
-    });
+    }, { ghosts });
 
     const reflect = () => {
       if (musicButton === null) return;

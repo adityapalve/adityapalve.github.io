@@ -113,6 +113,22 @@ Movement uses arrows or WASD; Enter, Space, E, or Z interacts; Escape closes dia
 Touch controls provide a d-pad and A, plus a Cycle button after collecting the bike.
 Companion, bicycle, and discovery progress last for the current visit and reset on reload.
 
+#### Other visitors
+
+The village can draw people who are not you. `presence.ts` is the whole of the transport — say
+where you are, take away whatever everyone else did — and knows nothing about sockets, so a room
+can be dropped in behind it without anything above it changing. `visitors.ts` turns those events
+into walkers, replaying each one a sixth of a second late, so a packet that arrives late shows up
+as a longer stride rather than a stumble.
+
+There is no server yet. `?ghost=3` fills the village with stand-in visitors who wander by the
+map's own rules, which is enough to look at the parts that are awkward to get right: the depth
+order, the nameplates, and the interpolation. Their walk is the same walk you take, through the
+same `advance` and `walkerView` in `adventure.ts`.
+
+Only where people are and how they look travels between clients. The huts, Squirtle, the bicycle,
+and the secrets stay with whoever is walking.
+
 #### Reusing the game with p5.js
 
 The current renderer uses Canvas 2D, not p5.js. A p5 migration does not require rebuilding
@@ -121,6 +137,7 @@ the whole game:
 - `map.ts` owns village terrain and locations; `cave-map.ts` defines the cave interior.
 - `adventure.ts` owns movement, collision, companion following, unlocks, ice sliding,
   and area-transition state, without DOM or drawing dependencies.
+- `visitors.ts` owns everyone else in the village, and `presence.ts` is where they come from.
 - `sprites.ts`, `tiles.ts`, and `adventure-sprites.ts` generate cached canvas sprites.
 - `dialog.ts` and the page's HTML HUD can stay outside the sketch, keeping text and
   controls accessible.
