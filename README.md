@@ -203,11 +203,15 @@ Helvetica/Arial, which is what Areal is a redraw of, so the site degrades almost
 
 ## Icons
 
-`npm run icons` regenerates `public/favicon.svg` and `public/apple-touch-icon.png` from one
-16×16 pixel grid in [`scripts/make-icons.mjs`](scripts/make-icons.mjs) — a hut from the village,
-drawn in code like the rest of the art. The tab icon is a silhouette that flips for
-`prefers-color-scheme`; the touch icon is the same hut inset on opaque paper, because a
-transparent icon reads as a hole on the home screen.
+`npm run icons` regenerates `public/favicon.svg` and `public/apple-touch-icon.png` from one set of
+shapes in [`scripts/make-icons.mjs`](scripts/make-icons.mjs), drawn in code like the rest of the
+art: a roof and a sun, printed like a two-drum riso job in Riso Teal and Riso Orange on paper, the
+second drum a little off register so the overlap multiplies darker.
+
+The tab icon is a single flat SVG with the paper tile included, so it reads the same in light and
+dark browser chrome and needs no `prefers-color-scheme` rule. The touch icon is the same print at
+180×180, opaque and full bleed: iOS rounds the corners itself and fills transparency with black.
+At that size there is also room for the riso grain a 16px tab cannot hold.
 
 ## Checks
 

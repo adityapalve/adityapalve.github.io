@@ -1,9 +1,9 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" shape-rendering="crispEdges" role="img" aria-label="A hut from the village">
-  <style>
-    path { fill: #1a1a1a; }
-    @media (prefers-color-scheme: dark) {
-      path { fill: #e0e0e0; }
-    }
-  </style>
-  <path d="M10 1h2v1h-2zM7 2h2v1h-2zM10 2h2v1h-2zM6 3h6v1h-6zM5 4h6v1h-6zM4 5h8v1h-8zM3 6h10v1h-10zM2 7h12v1h-12zM1 8h14v1h-14zM3 9h10v1h-10zM3 10h10v1h-10zM3 11h3v1h-3zM10 11h3v1h-3zM3 12h3v1h-3zM10 12h3v1h-3zM3 13h3v1h-3zM10 13h3v1h-3zM3 14h3v1h-3zM10 14h3v1h-3zM2 15h12v1h-12z"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="A roof and the sun, printed in two inks">
+  <defs>
+    <clipPath id="roof"><path d="M10 53L31 13L52 53Z"/></clipPath>
+  </defs>
+  <rect width="64" height="64" rx="14" fill="#f4efe6"/>
+  <path fill="#00838a" fill-rule="evenodd" d="M10 53L31 13L52 53Z M27 53V44A4 4 0 0 1 35 44V53Z"/>
+  <circle cx="43.5" cy="22.25" r="12" fill="#ff6c2f"/>
+  <circle cx="43.5" cy="22.25" r="12" fill="#003719" clip-path="url(#roof)"/>
 </svg>
