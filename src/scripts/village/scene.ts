@@ -1,7 +1,9 @@
+import type { TravelMode } from './adventure';
 import { adventureSprites } from './adventure-sprites';
+import { drawText, textWidth } from './font';
 import { key, mapHeight, mapWidth, type World } from './map';
 import { makeCanvas, tileSize } from './pixels';
-import { characterSprites, npcLooks, playerLook, type Facing } from './sprites';
+import { characterSprites, npcLooks, playerLook, type CharacterLook, type Facing } from './sprites';
 import { carSprite, caveSprite, drawGround, fenceSprite, hutSprite, plateHeight, signSprite, stallSprite, treeSprite } from './tiles';
 
 /** Positions are world pixels; optional adventure state keeps the home postcard reusable. */
@@ -10,12 +12,25 @@ export type Walker = {
   y: number;
   facing: Facing;
   frame: number;
-  mode?: 'walk' | 'bike' | 'surf';
+  mode?: TravelMode;
   companion?: { x: number; y: number; facing: Facing; frame: number };
   bikeUnlocked?: boolean;
+  /** Another visitor's own colours. Left off, a walker wears yours. */
+  look?: CharacterLook;
+  /** Shown over the head. You never wear your own name. */
+  name?: string;
 };
 
-export type Scene = { draw: (context: CanvasRenderingContext2D, camX: number, camY: number, seconds: number, walker: Walker) => void };
+export type Scene = {
+  draw: (context: CanvasRenderingContext2D, camX: number, camY: number, seconds: number, walker: Walker, others?: Walker[]) => void;
+};
+
+/** Every walker needs the same handful of frames, so they are built once per look. */
+type Bundle = { sprites: Map<Facing, HTMLCanvasElement[]>; adventure: ReturnType<typeof adventureSprites> };
+
+function lookKey(look: CharacterLook): string {
+  return [look.shirt, look.hair, look.skin ?? '', look.pants ?? '', look.hat ?? ''].join('|');
+}
 
 /** Two pre-rendered ground layers (water and flowers alternate between them). */
 function renderGround(world: World): HTMLCanvasElement[] {
@@ -50,34 +65,56 @@ export function createScene(world: World): Scene {
   const stall = world.workshop === undefined ? undefined : stallSprite('Projects');
   const carSprites = new Map(world.cars.map((car) => [car, carSprite(car.color)]));
   const npcSprites = new Map(world.npcs.map((npc) => [npc, characterSprites(npcLooks[npc.look % npcLooks.length]!)]));
-  const playerSprites = characterSprites(playerLook);
-  const adventure = adventureSprites(playerSprites);
+  const bundles = new Map<string, Bundle>();
 
-  const drawPlayer = (context: CanvasRenderingContext2D, walker: Walker, camX: number, camY: number, ripple: number) => {
-    const x = Math.round(walker.x) - camX;
-    const y = Math.round(walker.y) - camY;
+  const bundleFor = (look: CharacterLook): Bundle => {
+    const lookup = lookKey(look);
+    const known = bundles.get(lookup);
 
-    if (walker.mode === 'surf') {
+    if (known !== undefined) return known;
+
+    const sprites = characterSprites(look);
+    const bundle: Bundle = { sprites, adventure: adventureSprites(sprites) };
+
+    bundles.set(lookup, bundle);
+
+    return bundle;
+  };
+
+  const drawActor = (context: CanvasRenderingContext2D, actor: Walker, camX: number, camY: number, ripple: number) => {
+    const x = Math.round(actor.x) - camX;
+    const y = Math.round(actor.y) - camY;
+    const { sprites, adventure } = bundleFor(actor.look ?? playerLook);
+
+    if (actor.mode === 'surf') {
       context.drawImage(adventure.wake[ripple]!, x - 4, y + 2);
-      context.drawImage(adventure.surfing.get(walker.facing)![walker.frame]!, x - 4, y - 8);
-    } else if (walker.mode === 'bike') {
-      context.drawImage(adventure.cycling.get(walker.facing)![walker.frame]!, x - 4, y - 8);
+      context.drawImage(adventure.surfing.get(actor.facing)![actor.frame]!, x - 4, y - 8);
+    } else if (actor.mode === 'bike') {
+      context.drawImage(adventure.cycling.get(actor.facing)![actor.frame]!, x - 4, y - 8);
     } else {
-      context.drawImage(playerSprites.get(walker.facing)![walker.frame]!, x, y - 2);
+      context.drawImage(sprites.get(actor.facing)![actor.frame]!, x, y - 2);
     }
+
+    if (actor.name === undefined) return;
+
+    // A nameplate over the head, in the village's own 3x5 font and so on the same pixel grid
+    const left = x + Math.round((tileSize - textWidth(actor.name)) / 2);
+
+    drawText(context, actor.name, left + 1, y - 8, '#1d1a1f');
+    drawText(context, actor.name, left, y - 9, '#fbf7ee');
   };
 
   const drawCompanion = (context: CanvasRenderingContext2D, companion: NonNullable<Walker['companion']>, camX: number, camY: number) => {
-    context.drawImage(adventure.squirtle[companion.facing][companion.frame]!, Math.round(companion.x) - camX, Math.round(companion.y) - camY);
+    const squirtle = bundleFor(playerLook).adventure.squirtle;
+
+    context.drawImage(squirtle[companion.facing][companion.frame]!, Math.round(companion.x) - camX, Math.round(companion.y) - camY);
   };
 
   // Row by row, so things lower on the map paint over things above them
-  const draw: Scene['draw'] = (context, camX, camY, seconds, walker) => {
+  const draw: Scene['draw'] = (context, camX, camY, seconds, walker, others = []) => {
     const frame = Math.floor(seconds * 1.6) % 2;
     const bob = Math.floor(seconds * 1.25) % 2;
-    const walkerRow = Math.floor(walker.y / tileSize);
     const companion = walker.mode === 'surf' ? undefined : walker.companion;
-    const companionRow = companion === undefined ? -1 : Math.floor(companion.y / tileSize);
 
     if (world.area === 'cave') {
       context.fillStyle = '#192d45';
@@ -87,6 +124,24 @@ export function createScene(world: World): Scene {
     }
 
     context.drawImage(ground[frame]!, -camX, -camY);
+
+    /*
+      Everyone on foot, in the same depth order as the scenery: the row decides what paints over
+      what, and within a row the lower walker is in front. The companion goes in first so that at
+      the same depth it still tucks behind you, as it always has.
+    */
+    const standing: { y: number; paint: () => void }[] = [];
+
+    if (companion !== undefined) standing.push({ y: companion.y, paint: () => drawCompanion(context, companion, camX, camY) });
+
+    standing.push({ y: walker.y, paint: () => drawActor(context, walker, camX, camY, frame) });
+
+    for (const other of others) {
+      standing.push({ y: other.y, paint: () => drawActor(context, other, camX, camY, frame) });
+    }
+
+    // A stable sort, so walkers at identical depths keep the order above
+    standing.sort((a, b) => a.y - b.y);
 
     for (let ty = 0; ty < mapHeight; ty++) {
       for (const hut of world.huts) {
@@ -122,9 +177,9 @@ export function createScene(world: World): Scene {
         const y = feature.ty * tileSize - camY;
 
         if (feature.id === 'starter') {
-          if (walker.companion === undefined) context.drawImage(adventure.squirtle.down[0]!, x, y - bob);
+          if (walker.companion === undefined) context.drawImage(bundleFor(playerLook).adventure.squirtle.down[0]!, x, y - bob);
         } else if (feature.id === 'bike') {
-          if (!walker.bikeUnlocked) context.drawImage(adventure.bike.left, x - 4, y + 4);
+          if (!walker.bikeUnlocked) context.drawImage(bundleFor(playerLook).adventure.bike.left, x - 4, y + 4);
         }
       }
 
@@ -136,11 +191,11 @@ export function createScene(world: World): Scene {
         context.drawImage(sprite, npc.tx * tileSize - camX, npc.ty * tileSize - camY - bob);
       }
 
-      if (companion !== undefined && ty === companionRow && companion.y <= walker.y) drawCompanion(context, companion, camX, camY);
+      for (const actor of standing) {
+        if (Math.floor(actor.y / tileSize) !== ty) continue;
 
-      if (ty === walkerRow) drawPlayer(context, walker, camX, camY, frame);
-
-      if (companion !== undefined && ty === companionRow && companion.y > walker.y) drawCompanion(context, companion, camX, camY);
+        actor.paint();
+      }
     }
   };
 
