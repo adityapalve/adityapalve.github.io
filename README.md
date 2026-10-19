@@ -172,6 +172,12 @@ sends `/village/room` to the Worker first. Other missing paths return 404, not a
 fallback. `workers_dev` stays `true`, so the same build is always reachable at
 `https://palve-dev.<account>.workers.dev` as a preview and rollback target.
 
+Deploying is Cloudflare's job, not GitHub's. The repository is connected to the `palve-dev` Worker
+under Workers Builds, with `master` as the production branch, so **a merge to `master` builds
+(`npm run build`) and deploys on its own** — no GitHub secret is involved. `.github/workflows/ci.yml`
+only runs checks: lint, Astro and Worker type-checks, a build, and the room suite against a local
+`wrangler dev`. A local `npm run deploy` still works but now duplicates what the push already did.
+
 ```bash
 npm run worker:dev       # build and serve the site + room at http://localhost:8787
 npm run worker:test      # run socket integration checks against that local server
@@ -200,14 +206,9 @@ It is the one step `wrangler login` cannot do, since it grants no DNS-write scop
 `workers_dev` on means a deploy that hits `100117` only skips the custom domain rather than taking
 the site down.
 
-Two things still sit outside the repo:
-
-- GitHub Actions secrets `CLOUDFLARE_API_TOKEN` (Workers edit plus account read) and
-  `CLOUDFLARE_ACCOUNT_ID`. Until they exist, a push to `master` fails its deploy step, so CI cannot
-  publish. `.github/workflows/deploy.yml` deploys to Workers on `master` or manual dispatch; no
-  Pages job remains.
-- The GitHub Pages custom-domain binding in repository Settings → Pages is now redundant and can be
-  removed; Pages does not redirect to Cloudflare on its own.
+One thing still sits outside the repo: the GitHub Pages custom-domain binding in repository
+Settings → Pages is now redundant and can be removed; Pages does not redirect to Cloudflare on its
+own.
 
 #### Reusing the game with p5.js
 
