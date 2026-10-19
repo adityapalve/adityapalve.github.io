@@ -164,34 +164,50 @@ the start button in each; the `?name=` value prefills the card. Plain `npm run d
 on 4321, but does not provide a room: use `worker:dev` for multiplayer.
 Generated Worker types live in ignored `worker/env.d.ts`; regenerate after changing bindings.
 
-**Cutover from GitHub Pages:**
+#### Hosting
 
-1. `npm run deploy` creates the `palve-dev` Worker, its SQLite-backed `VillageRoom` namespace,
-   and — because `workers_dev` is `true` — the preview at
-   `https://palve-dev.<account>.workers.dev`. Verify the site, fonts, missing-page handling, and
-   two visitors there first.
-2. `wrangler.jsonc` already declares the custom domain:
-   `"routes": [{ "pattern": "palve.dev", "custom_domain": true }]`. Cloudflare refuses to attach it
-   while the apex still points at GitHub Pages — `code: 100117`, "already has externally managed
-   DNS records". In the Cloudflare dashboard, open the `palve.dev` zone → DNS → Records and delete
-   the apex `A`/`AAAA`/`CNAME` record that reaches GitHub Pages (usually a proxied `CNAME` to
-   `<owner>.github.io`). Keep MX/TXT and other hosts. This is the one step that cannot be scripted
-   here: `wrangler login` grants no DNS-write scope. A `workers_dev` deployment keeps serving
-   meanwhile, so the site is never dark during the swap.
-3. `npm run deploy` again. Cloudflare Custom Domains creates the replacement record and
-   certificate, and `palve.dev` is served by the Worker. Handle `www` separately if it currently
-   redirects.
-4. Add GitHub Actions secrets `CLOUDFLARE_API_TOKEN` (Workers edit and account access; zone/DNS
-   permissions if managing the custom domain) and `CLOUDFLARE_ACCOUNT_ID`. The replacement
-   `.github/workflows/deploy.yml` deploys to Workers on `master` or manual dispatch, not Pages.
-   Until those secrets exist, a push to `master` fails its deploy step.
-5. Once Cloudflare serves the domain correctly, remove the GitHub Pages custom-domain binding
-   in repository Settings → Pages. Disable Pages or keep its github.io URL separately; it does
-   not redirect to Cloudflare automatically after removing the custom-domain setting.
+The site is live at https://palve.dev, with `www.palve.dev` served by the same Worker. Astro still
+builds static HTML; no SSR adapter is required. `wrangler.jsonc` serves `dist/` as static assets and
+sends `/village/room` to the Worker first. Other missing paths return 404, not a single-page-app
+fallback. `workers_dev` stays `true`, so the same build is always reachable at
+`https://palve-dev.<account>.workers.dev` as a preview and rollback target.
 
-For rollback, re-point the apex DNS record at GitHub Pages and restore the Pages binding; the
-Worker keeps its `workers.dev` URL throughout. A deploy that hits `100117` only skips the custom
-domain — it does not take the site down.
+```bash
+npm run worker:dev       # build and serve the site + room at http://localhost:8787
+npm run worker:test      # run socket integration checks against that local server
+npm run worker:check     # generate binding/runtime types, then type-check the Worker
+npx wrangler deploy --dry-run
+```
+
+For a quick visual test, open `/village?name=ALICE` and `/village?name=BOB` in two tabs and press
+the start button in each; the `?name=` value prefills the card. Plain `npm run dev` still runs Astro
+on 4321, but does not provide a room: use `worker:dev` for multiplayer.
+Generated Worker types live in ignored `worker/env.d.ts`; regenerate after changing bindings.
+
+Both hostnames are Workers custom domains:
+
+```jsonc
+"routes": [
+  { "pattern": "palve.dev", "custom_domain": true },
+  { "pattern": "www.palve.dev", "custom_domain": true }
+]
+```
+
+Cloudflare refuses a custom domain while the hostname still has externally managed DNS records
+(`code: 100117`) — which is exactly what the old GitHub Pages apex record was. Deleting that record
+in the dashboard (zone → DNS) let the Custom Domain create the replacement record and certificate.
+It is the one step `wrangler login` cannot do, since it grants no DNS-write scope; keeping
+`workers_dev` on means a deploy that hits `100117` only skips the custom domain rather than taking
+the site down.
+
+Two things still sit outside the repo:
+
+- GitHub Actions secrets `CLOUDFLARE_API_TOKEN` (Workers edit plus account read) and
+  `CLOUDFLARE_ACCOUNT_ID`. Until they exist, a push to `master` fails its deploy step, so CI cannot
+  publish. `.github/workflows/deploy.yml` deploys to Workers on `master` or manual dispatch; no
+  Pages job remains.
+- The GitHub Pages custom-domain binding in repository Settings → Pages is now redundant and can be
+  removed; Pages does not redirect to Cloudflare on its own.
 
 #### Reusing the game with p5.js
 
@@ -265,8 +281,8 @@ on `<html>` and the storage key, and the select's own options are its values.
 **Paper Mono** is OFL, so it is committed and served without a caveat.
 
 **ABC Areal** is free from Dinamo, but their [licence](https://abcdinamo.com/licenses) bars putting
-the binaries in public repositories or on public servers. This repository is public and served by
-GitHub Pages, so committing the subset is exactly what that clause is about: a risk knowingly
+the binaries in public repositories or on public servers. This repository is public and served from
+Cloudflare, so committing the subset is exactly what that clause is about: a risk knowingly
 accepted for a personal site, not a reading of the licence. Everything else here follows the terms,
 and removing it again is two edits — the files plus the links in the layout.
 
@@ -279,8 +295,8 @@ and removing it again is two edits — the files plus the links in the layout.
   installed. Subsetting needs `pip install fonttools brotli`; without it the script keeps the
   committed subset and warns.
 
-The layout links the stylesheet unconditionally; if the request fails the stack falls back to
-Helvetica/Arial, which is what Areal is a redraw of, so the site degrades almost identically.
+The layout links the stylesheet unconditionally; if the request fails the stack falls back through
+Helvetica to Arial, the typeface Areal revives, so the site degrades almost identically.
 
 ## Icons
 
