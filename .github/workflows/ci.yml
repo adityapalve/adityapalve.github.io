@@ -1,19 +1,20 @@
-name: Deploy site and village to Cloudflare Workers
+name: Check the site and village
 
 on:
   push:
     branches: [master]
+  pull_request:
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: cloudflare-production
-  cancel-in-progress: false
+  group: checks-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  deploy:
+  check:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -26,6 +27,8 @@ jobs:
       - run: npm run check
       - run: npm run worker:check
       - run: npm run build
+      # Deployment belongs to Cloudflare: pushing to master builds and deploys the Worker.
+      # This job only proves the code, including the room, before that happens.
       - name: Test the local village room
         run: |
           npx wrangler dev --port 8787 > "$RUNNER_TEMP/village-worker.log" 2>&1 &
@@ -38,7 +41,3 @@ jobs:
             sleep 1
           done
           npm run worker:test
-      - uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
