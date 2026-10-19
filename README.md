@@ -164,26 +164,34 @@ the start button in each; the `?name=` value prefills the card. Plain `npm run d
 on 4321, but does not provide a room: use `worker:dev` for multiplayer.
 Generated Worker types live in ignored `worker/env.d.ts`; regenerate after changing bindings.
 
-**Cutover from GitHub Pages (not performed automatically):**
+**Cutover from GitHub Pages:**
 
-1. Run `npx wrangler login`, select the intended account, and run `npm run deploy`. This creates
-   the `palve-dev` Worker and SQLite-backed `VillageRoom` namespace on its workers.dev hostname;
-   the default config deliberately does not change `palve.dev` DNS.
-2. Verify the site, fonts, missing-page handling, and two visitors on that hostname first.
-3. When ready, remove conflicting GitHub Pages A/AAAA/CNAME records for the apex, then add
-   `"routes": [{ "pattern": "palve.dev", "custom_domain": true }]` to `wrangler.jsonc` and
-   redeploy. Cloudflare Custom Domains manages the replacement DNS record and certificate.
-   Preserve unrelated mail/TXT records. Handle `www` separately if it currently redirects.
+1. `npm run deploy` creates the `palve-dev` Worker, its SQLite-backed `VillageRoom` namespace,
+   and — because `workers_dev` is `true` — the preview at
+   `https://palve-dev.<account>.workers.dev`. Verify the site, fonts, missing-page handling, and
+   two visitors there first.
+2. `wrangler.jsonc` already declares the custom domain:
+   `"routes": [{ "pattern": "palve.dev", "custom_domain": true }]`. Cloudflare refuses to attach it
+   while the apex still points at GitHub Pages — `code: 100117`, "already has externally managed
+   DNS records". In the Cloudflare dashboard, open the `palve.dev` zone → DNS → Records and delete
+   the apex `A`/`AAAA`/`CNAME` record that reaches GitHub Pages (usually a proxied `CNAME` to
+   `<owner>.github.io`). Keep MX/TXT and other hosts. This is the one step that cannot be scripted
+   here: `wrangler login` grants no DNS-write scope. A `workers_dev` deployment keeps serving
+   meanwhile, so the site is never dark during the swap.
+3. `npm run deploy` again. Cloudflare Custom Domains creates the replacement record and
+   certificate, and `palve.dev` is served by the Worker. Handle `www` separately if it currently
+   redirects.
 4. Add GitHub Actions secrets `CLOUDFLARE_API_TOKEN` (Workers edit and account access; zone/DNS
    permissions if managing the custom domain) and `CLOUDFLARE_ACCOUNT_ID`. The replacement
    `.github/workflows/deploy.yml` deploys to Workers on `master` or manual dispatch, not Pages.
-   Configure secrets before merging this branch; no Pages job remains in that workflow.
+   Until those secrets exist, a push to `master` fails its deploy step.
 5. Once Cloudflare serves the domain correctly, remove the GitHub Pages custom-domain binding
    in repository Settings → Pages. Disable Pages or keep its github.io URL separately; it does
    not redirect to Cloudflare automatically after removing the custom-domain setting.
 
-For rollback, restore the former Pages workflow and domain records/binding; keep the previous
-DNS values before cutover. No production domain or Cloudflare resource is changed by local tests.
+For rollback, re-point the apex DNS record at GitHub Pages and restore the Pages binding; the
+Worker keeps its `workers.dev` URL throughout. A deploy that hits `100117` only skips the custom
+domain — it does not take the site down.
 
 #### Reusing the game with p5.js
 
