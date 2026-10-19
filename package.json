@@ -10,14 +10,22 @@
     "lint": "oxlint",
     "lint:fix": "oxlint --fix",
     "check": "astro check",
-    "predev": "node scripts/import-photos.mjs",
+    "worker:types": "wrangler types worker/env.d.ts",
+    "worker:check": "npm run worker:types && tsc -p worker/tsconfig.json",
+    "worker:dev": "npm run build && wrangler dev",
+    "worker:test": "node scripts/test-village-room.mjs",
+    "deploy": "npm run build && wrangler deploy",
+    "icons": "node scripts/make-icons.mjs",
+    "fonts:sync": "node scripts/sync-fonts.mjs",
+    "predev": "node scripts/import-photos.mjs && node scripts/sync-fonts.mjs",
     "prebuild": "node scripts/import-photos.mjs",
     "photos:import": "node scripts/import-photos.mjs",
     "notes:publish": "node scripts/publish.mjs"
   },
   "dependencies": {
     "astro": "^5.16.0",
-    "leaflet": "^1.9.4"
+    "leaflet": "^1.9.4",
+    "zod": "^3.25.76"
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.10",
@@ -26,6 +34,8 @@
     "exifr": "^7.1.3",
     "gray-matter": "^4.0.3",
     "oxlint": "1.83.0",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "wrangler": "^4.151.1",
+    "ws": "^8.22.0"
   }
 }

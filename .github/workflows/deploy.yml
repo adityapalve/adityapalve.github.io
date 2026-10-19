@@ -1,43 +1,44 @@
-name: Deploy Astro site to GitHub Pages
+name: Deploy site and village to Cloudflare Workers
 
 on:
   push:
-    branches:
-      - master
+    branches: [master]
+  workflow_dispatch:
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 concurrency:
-  group: "pages"
+  group: cloudflare-production
   cancel-in-progress: false
 
 jobs:
-  build:
-    runs-on: ubuntu-22.04
+  deploy:
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
-      - name: Install Dependencies
-        run: npm ci
-      - name: Build Astro site
-        run: npm run build
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run check
+      - run: npm run worker:check
+      - run: npm run build
+      - name: Test the local village room
+        run: |
+          npx wrangler dev --port 8787 > "$RUNNER_TEMP/village-worker.log" 2>&1 &
+          worker_pid=$!
+          trap 'kill "$worker_pid" 2>/dev/null || true' EXIT
+          for attempt in {1..30}; do
+            if curl --fail --silent http://localhost:8787/ > /dev/null; then
+              break
+            fi
+            sleep 1
+          done
+          npm run worker:test
+      - uses: cloudflare/wrangler-action@v3
         with:
-          path: dist
-
-  deploy:
-    needs: build
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
-    steps:
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

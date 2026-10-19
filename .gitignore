@@ -1,5 +1,8 @@
 # build output
 dist/
+.wrangler/
+worker/env.d.ts
+.dev.vars*
 # generated types
 .astro/
 

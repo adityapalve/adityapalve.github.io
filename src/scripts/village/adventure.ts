@@ -1,4 +1,5 @@
 import { mapHeight, mapWidth, type Portal, type World } from './map';
+import { tileSize } from './pixels';
 import type { Facing } from './sprites';
 
 export type TravelMode = 'walk' | 'bike' | 'surf';
@@ -30,7 +31,38 @@ export const directions: Record<Facing, { dx: number; dy: number }> = {
   right: { dx: 1, dy: 0 },
 };
 
-const speeds: Record<TravelMode, number> = { walk: 5.2, bike: 9, surf: 4.2 };
+export const speeds: Record<TravelMode, number> = { walk: 5.2, bike: 9, surf: 4.2 };
+
+/** One tick of a walk already under way: no input, no collision, nobody to ask. */
+function advance(traveller: Traveler, dt: number, speed: number): void {
+  traveller.step = Math.min(1, traveller.step + dt * speed);
+  traveller.cycle += dt * speed * 2;
+
+  if (traveller.step >= 1) traveller.moving = false;
+}
+
+/**
+ * Walk another visitor across the tile the network moved them to.
+ *
+ * They get no say in where they go and no collision of their own: the tiles arrive already
+ * decided, and the only job left is to make the journey look like the one you are taking.
+ */
+export function advanceTraveller(traveller: Traveler, dt: number, mode: TravelMode): void {
+  if (!traveller.moving) return;
+
+  advance(traveller, dt, speeds[mode]);
+}
+
+/** Where a traveller stands between tiles, and which step of the walk they are on. */
+export type TravellerView = { x: number; y: number; frame: number };
+
+/** Where a traveller is between tiles, so everyone interpolates the same way. */
+export function walkerView(traveller: Traveler): TravellerView {
+  const x = (traveller.from.tx + (traveller.tx - traveller.from.tx) * traveller.step) * tileSize;
+  const y = (traveller.from.ty + (traveller.ty - traveller.from.ty) * traveller.step) * tileSize;
+
+  return { x, y, frame: traveller.moving ? 1 + (Math.floor(traveller.cycle) % 2) : 0 };
+}
 
 /** World-space rules only: no canvas, input events, or DOM dependencies. */
 export function createAdventure(initialWorld: World) {
@@ -81,15 +113,11 @@ export function createAdventure(initialWorld: World) {
 
   const update = (dt: number, facing?: Facing): Portal | undefined => {
     if (player.moving) {
-      const speed = state.sliding ? 10 : speeds[state.mode];
-
-      player.step = Math.min(1, player.step + dt * speed);
-      player.cycle += dt * speed * 2;
+      advance(player, dt, state.sliding ? 10 : speeds[state.mode]);
       companion.step = player.step;
       companion.cycle = player.cycle;
 
-      if (player.step >= 1) {
-        player.moving = false;
+      if (!player.moving) {
         const portal = world.portals.find((portal) => portal.tx === player.tx && portal.ty === player.ty);
 
         if (portal !== undefined) return portal;

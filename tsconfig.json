@@ -6,6 +6,7 @@
   ],
   "exclude": [
     "dist",
-    "stash"
+    "stash",
+    "worker"
   ]
 }

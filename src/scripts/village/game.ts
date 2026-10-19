@@ -1,11 +1,13 @@
 import { createChiptune, type Chiptune } from './audio';
-import { createAdventure, directions } from './adventure';
+import { createAdventure, directions, walkerView } from './adventure';
 import { buildCave } from './cave-map';
 import { createTextBox, type Page } from './dialog';
 import { buildWorld, mapHeight, mapWidth, type HutData, type Npc, type VillageData, type WorkshopData, type World } from './map';
 import { tileSize } from './pixels';
-import { createScene, fitCanvas, type Scene } from './scene';
+import { createLoopbackPresence, type Presence } from './presence';
+import { createScene, fitCanvas, type Scene, type Walker } from './scene';
 import type { Facing } from './sprites';
+import { createVisitors } from './visitors';
 
 /** What the player is facing and could talk to. */
 type Target = { kind: 'npc'; npc: Npc } | { kind: 'sign' } | { kind: 'feature'; feature: World['features'][number] } | { kind: 'water' };
@@ -47,9 +49,16 @@ const welcomePages: Page[] = [
   { text: 'Follow the east path to the lake. Somewhere across the water, and somewhere in the southern grove, a secret is waiting.' },
 ];
 
-export type Village = { music: Chiptune };
+export type Village = { music: Chiptune; join: (presence: Presence) => void };
 
-export function startVillage(root: HTMLElement, canvas: HTMLCanvasElement, data: VillageData, onProgress: (visited: number, total: number) => void): Village {
+export type VillageOptions = {
+  /** A live connection to everyone else in the village, once there is a room to join. */
+  presence?: Presence;
+  /** Stand-in visitors, for looking at the village when you are the only one in it. */
+  ghosts?: number;
+};
+
+export function startVillage(root: HTMLElement, canvas: HTMLCanvasElement, data: VillageData, onProgress: (visited: number, total: number) => void, options: VillageOptions = {}): Village {
   const context = canvas.getContext('2d');
 
   if (context === null) throw new Error('village: 2d canvas unavailable');
@@ -76,6 +85,40 @@ export function startVillage(root: HTMLElement, canvas: HTMLCanvasElement, data:
   const bikeButton = root.querySelector<HTMLButtonElement>('[data-action="bike"]');
   const secrets = new Set<string>();
   let lastStatus = '';
+
+  const visitors = createVisitors();
+  const ghosts = options.ghosts ?? 0;
+
+  // Without a room to join, a few ghosts will do: the same events through the same seam, one
+  // browser talking to itself
+  let presence: Presence | undefined = options.presence ?? (ghosts > 0
+    ? createLoopbackPresence({ canEnter: adventure.canEnter, start: world.start, count: ghosts })
+    : undefined);
+
+  let announced = '';
+
+  /**
+   * Join a room. The visitor names themselves on the start card, which is after the game is
+   * already running, so the transport arrives late and the first position goes out on the next
+   * change rather than the next frame.
+   */
+  const join = (next: Presence) => {
+    presence?.close();
+    presence = next;
+    announced = '';
+  };
+
+  /** Tell the room where we are, but only when it changes: a step, a turn, a mount, a doorway. */
+  const announce = () => {
+    if (presence === undefined) return;
+
+    const marker = `${state.area}|${player.tx},${player.ty}|${player.facing}|${state.mode}`;
+
+    if (marker === announced) return;
+
+    announced = marker;
+    presence.publish({ area: state.area, tx: player.tx, ty: player.ty, facing: player.facing, mode: state.mode });
+  };
 
   const reflectAdventure = () => {
     const text = `${state.area === 'cave' ? 'Frostfall Cave · ' : ''}${state.hasCompanion ? 'Squirtle' : 'Find Squirtle'} · ${state.sliding ? 'Sliding' : state.mode === 'surf' ? 'Surfing' : state.mode === 'bike' ? 'Cycling' : 'Walking'}${state.hasBike ? ' · Bicycle' : ''} · Secrets ${secrets.size}/3`;
@@ -332,26 +375,38 @@ export function startVillage(root: HTMLElement, canvas: HTMLCanvasElement, data:
       music.blip();
     }
 
+    if (presence !== undefined) {
+      for (const event of presence.drain()) visitors.handle(event);
+
+      announce();
+    }
+
+    visitors.update(dt);
     reflectAdventure();
 
     if (prompt !== null) prompt.hidden = player.moving || textBox.isOpen() || talkTarget() === undefined;
   };
 
   const draw = (seconds: number) => {
-    const px = (player.from.tx + (player.tx - player.from.tx) * player.step) * tileSize;
-    const py = (player.from.ty + (player.ty - player.from.ty) * player.step) * tileSize;
-    const camX = Math.round(Math.min(Math.max(px + tileSize / 2 - canvas.width / 2, 0), mapWidth * tileSize - canvas.width));
-    const camY = Math.round(Math.min(Math.max(py + tileSize / 2 - canvas.height / 2, 0), mapHeight * tileSize - canvas.height));
-    const frame = player.moving ? 1 + (Math.floor(player.cycle) % 2) : 0;
-
+    const view = walkerView(player);
     const companion = state.companion;
-    const cx = (companion.from.tx + (companion.tx - companion.from.tx) * companion.step) * tileSize;
-    const cy = (companion.from.ty + (companion.ty - companion.from.ty) * companion.step) * tileSize;
+    const companionView = walkerView(companion);
+    const camX = Math.round(Math.min(Math.max(view.x + tileSize / 2 - canvas.width / 2, 0), mapWidth * tileSize - canvas.width));
+    const camY = Math.round(Math.min(Math.max(view.y + tileSize / 2 - canvas.height / 2, 0), mapHeight * tileSize - canvas.height));
 
-    scene.draw(context, camX, camY, seconds, {
-      x: px, y: py, facing: player.facing, frame, mode: state.mode, bikeUnlocked: state.hasBike,
-      companion: state.hasCompanion ? { x: cx, y: cy, facing: companion.facing, frame } : undefined,
-    });
+    const walker: Walker = {
+      x: view.x,
+      y: view.y,
+      facing: player.facing,
+      frame: view.frame,
+      mode: state.mode,
+      bikeUnlocked: state.hasBike,
+      companion: state.hasCompanion
+        ? { x: companionView.x, y: companionView.y, facing: companion.facing, frame: companionView.frame }
+        : undefined,
+    };
+
+    scene.draw(context, camX, camY, seconds, walker, visitors.walkers(state.area));
   };
 
   // Fixed-step simulation: movement speed stays the same whether the tab runs at 120 fps or is throttled
@@ -378,5 +433,5 @@ export function startVillage(root: HTMLElement, canvas: HTMLCanvasElement, data:
 
   requestAnimationFrame(loop);
 
-  return { music };
+  return { music, join };
 }
