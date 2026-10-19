@@ -49,7 +49,7 @@ const welcomePages: Page[] = [
   { text: 'Follow the east path to the lake. Somewhere across the water, and somewhere in the southern grove, a secret is waiting.' },
 ];
 
-export type Village = { music: Chiptune };
+export type Village = { music: Chiptune; join: (presence: Presence) => void };
 
 export type VillageOptions = {
   /** A live connection to everyone else in the village, once there is a room to join. */
@@ -91,11 +91,22 @@ export function startVillage(root: HTMLElement, canvas: HTMLCanvasElement, data:
 
   // Without a room to join, a few ghosts will do: the same events through the same seam, one
   // browser talking to itself
-  const presence = options.presence ?? (ghosts > 0
+  let presence: Presence | undefined = options.presence ?? (ghosts > 0
     ? createLoopbackPresence({ canEnter: adventure.canEnter, start: world.start, count: ghosts })
     : undefined);
 
   let announced = '';
+
+  /**
+   * Join a room. The visitor names themselves on the start card, which is after the game is
+   * already running, so the transport arrives late and the first position goes out on the next
+   * change rather than the next frame.
+   */
+  const join = (next: Presence) => {
+    presence?.close();
+    presence = next;
+    announced = '';
+  };
 
   /** Tell the room where we are, but only when it changes: a step, a turn, a mount, a doorway. */
   const announce = () => {
@@ -422,5 +433,5 @@ export function startVillage(root: HTMLElement, canvas: HTMLCanvasElement, data:
 
   requestAnimationFrame(loop);
 
-  return { music };
+  return { music, join };
 }

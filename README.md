@@ -121,13 +121,69 @@ can be dropped in behind it without anything above it changing. `visitors.ts` tu
 into walkers, replaying each one a sixth of a second late, so a packet that arrives late shows up
 as a longer stride rather than a stumble.
 
-There is no server yet. `?ghost=3` fills the village with stand-in visitors who wander by the
-map's own rules, which is enough to look at the parts that are awkward to get right: the depth
-order, the nameplates, and the interpolation. Their walk is the same walk you take, through the
-same `advance` and `walkerView` in `adventure.ts`.
+`socket-presence.ts` joins the same-origin `/village/room` WebSocket. `worker/index.ts` relays
+positions through one hibernating Durable Object, with a 24-connection cap. Each connection owns
+its server-assigned id; names are restricted to 12 printable pixel-font characters. Socket
+attachments preserve the roster across hibernation without storing world progress. Messages are
+schema-validated, bounded, and limited to 30 updates/second per connection. This is anonymous
+presence, not authoritative gameplay or authentication; the Origin check only gates browsers.
+
+You are named once, on the start card. It offers a name, remembers it in `localStorage` once you
+accept it, and keeps it for the visit: renaming means reloading, because the room takes one name
+per connection. The card is also the audio gesture, so one press both joins the room and starts
+the music. `identity.ts` holds the rules the card and the room share, so a nameplate always shows
+exactly what the room accepted; a visitor who clears the field still gets a name rather than a
+number.
+
+Connections retry with backoff, clear departed walkers, and resend the current position after
+reconnecting. A heartbeat detects broken connections; idle pings are answered without waking the
+object. If the room is unavailable or full, the game remains playable solo. Deploys disconnect
+sockets, so reconnecting is part of normal operation.
+
+`?ghost=3` opts out of the room and fills the village with offline stand-ins. `?name=ALICE`
+prefills the start card, which keeps the two-tab test scriptable.
 
 Only where people are and how they look travels between clients. The huts, Squirtle, the bicycle,
 and the secrets stay with whoever is walking.
+
+#### Running the site on Cloudflare
+
+Astro still builds static HTML; no SSR adapter is required. `wrangler.jsonc` serves `dist/`
+as static assets and sends `/village/room` to the Worker first. Other missing paths return 404,
+not a single-page-app fallback.
+
+```bash
+npm run worker:dev       # build and serve the site + room at http://localhost:8787
+npm run worker:test      # run socket integration checks against that local server
+npm run worker:check     # generate binding/runtime types, then type-check the Worker
+npx wrangler deploy --dry-run
+```
+
+For a quick visual test, open `/village?name=ALICE` and `/village?name=BOB` in two tabs and press
+the start button in each; the `?name=` value prefills the card. Plain `npm run dev` still runs Astro
+on 4321, but does not provide a room: use `worker:dev` for multiplayer.
+Generated Worker types live in ignored `worker/env.d.ts`; regenerate after changing bindings.
+
+**Cutover from GitHub Pages (not performed automatically):**
+
+1. Run `npx wrangler login`, select the intended account, and run `npm run deploy`. This creates
+   the `palve-dev` Worker and SQLite-backed `VillageRoom` namespace on its workers.dev hostname;
+   the default config deliberately does not change `palve.dev` DNS.
+2. Verify the site, fonts, missing-page handling, and two visitors on that hostname first.
+3. When ready, remove conflicting GitHub Pages A/AAAA/CNAME records for the apex, then add
+   `"routes": [{ "pattern": "palve.dev", "custom_domain": true }]` to `wrangler.jsonc` and
+   redeploy. Cloudflare Custom Domains manages the replacement DNS record and certificate.
+   Preserve unrelated mail/TXT records. Handle `www` separately if it currently redirects.
+4. Add GitHub Actions secrets `CLOUDFLARE_API_TOKEN` (Workers edit and account access; zone/DNS
+   permissions if managing the custom domain) and `CLOUDFLARE_ACCOUNT_ID`. The replacement
+   `.github/workflows/deploy.yml` deploys to Workers on `master` or manual dispatch, not Pages.
+   Configure secrets before merging this branch; no Pages job remains in that workflow.
+5. Once Cloudflare serves the domain correctly, remove the GitHub Pages custom-domain binding
+   in repository Settings → Pages. Disable Pages or keep its github.io URL separately; it does
+   not redirect to Cloudflare automatically after removing the custom-domain setting.
+
+For rollback, restore the former Pages workflow and domain records/binding; keep the previous
+DNS values before cutover. No production domain or Cloudflare resource is changed by local tests.
 
 #### Reusing the game with p5.js
 

@@ -1,0 +1,20 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "palve-dev",
+  "main": "worker/index.ts",
+  // Latest date accepted by the installed workerd runtime (UTC).
+  "compatibility_date": "2026-10-18",
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    "run_worker_first": ["/village/room"]
+  },
+  "durable_objects": {
+    "bindings": [{ "name": "VILLAGE", "class_name": "VillageRoom" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["VillageRoom"] }],
+  "observability": {
+    "enabled": true,
+    "traces": { "enabled": true, "head_sampling_rate": 0.01 }
+  }
+}

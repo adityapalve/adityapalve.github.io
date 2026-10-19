@@ -28,11 +28,19 @@ const village = loadVillage();
 
     <p class="label prompt" hidden><span class="for-keys">Press Enter</span><span class="for-touch">Press A</span> to interact</p>
 
-    <button class="start" type="button">
-      <span class="for-keys">Click to start</span><span class="for-touch">Tap to start</span>
-      <span class="label"><span class="for-keys">arrows / WASD · enter · B to cycle</span><span class="for-touch">d-pad · A · Cycle button</span></span>
-      <span class="label">Meet Squirtle · find a bicycle · explore the lake</span>
-    </button>
+    <div class="start">
+      <form class="start-card">
+        <label class="start-field" for="visitor-name">
+          <span class="label">Your name</span>
+          <input class="start-name" id="visitor-name" name="name" maxlength="12" autocomplete="off" autocapitalize="characters" spellcheck="false" />
+        </label>
+        <button class="start-go" type="submit">
+          <span class="for-keys">Click to start</span><span class="for-touch">Tap to start</span>
+        </button>
+        <span class="label start-hint"><span class="for-keys">arrows / WASD · enter · B to cycle</span><span class="for-touch">d-pad · A · Cycle button</span></span>
+        <span class="label start-hint">Meet Squirtle · find a bicycle · explore the lake</span>
+      </form>
+    </div>
 
     <div class="pad" aria-label="Touch controls">
       <div class="dpad">
@@ -159,31 +167,93 @@ const village = loadVillage();
     white-space: nowrap;
   }
 
-  /* Start gate: the game only takes the keyboard once you have clicked into it */
+  /* Start gate: name yourself, then the game takes the keyboard */
   .start {
     position: absolute;
     inset: 0;
     z-index: 1;
     display: flex;
-    flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 0.5rem;
-    border: 0;
+    padding: 1rem;
     background: rgba(29, 26, 31, 0.55);
     color: #fff;
-    font: inherit;
-    font-size: 1.1rem;
-    cursor: pointer;
     transition: opacity 150ms var(--ease-out);
-  }
-
-  .start .label {
-    opacity: 0.7;
   }
 
   .start[hidden] {
     display: none;
+  }
+
+  /* Same card as the text box, so the first screen already looks like the game */
+  .start-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.55rem;
+    width: min(100%, 21rem);
+    padding: 1.1rem 1.25rem 1.15rem;
+    border: 3px solid #1d1a1f;
+    border-radius: 6px;
+    background: #fbf7ee;
+    color: #1d1a1f;
+    box-shadow:
+      inset 0 0 0 2px #fbf7ee,
+      inset 0 0 0 4px #7a7580;
+  }
+
+  .start-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    width: 100%;
+  }
+
+  .start-name {
+    width: 100%;
+    padding: 0.35rem 0.5rem;
+    border: 2px solid #1d1a1f;
+    border-radius: 4px;
+    background: #fff;
+    color: inherit;
+    font-family: var(--font-mono);
+    font-size: 0.9rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  .start-go {
+    padding: 0.45rem 0.9rem;
+    border: 2px solid #1d1a1f;
+    border-radius: 4px;
+    background: #c8442e;
+    color: #fbf7ee;
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition-property: background-color, scale;
+    transition-duration: 150ms;
+    transition-timing-function: var(--ease-out);
+  }
+
+  .start-go:active {
+    scale: 0.96;
+  }
+
+  .start-name:focus-visible,
+  .start-go:focus-visible {
+    outline: 2px solid #1d1a1f;
+    outline-offset: 2px;
+  }
+
+  .start-hint {
+    text-align: center;
+  }
+
+  .start .label {
+    opacity: 0.7;
   }
 
   /* Text box: bottom of the screen, like the handhelds */
@@ -366,13 +436,19 @@ const village = loadVillage();
 
 <script>
   import { startVillage } from '../scripts/village/game';
+  import { createSocketPresence } from '../scripts/village/socket-presence';
+  import { suggestedName, tidyName } from '../scripts/village/identity';
   import type { VillageData } from '../scripts/village/map';
 
   const root = document.querySelector<HTMLElement>('.game');
 
   const canvas = document.querySelector<HTMLCanvasElement>('.screen');
 
-  const start = document.querySelector<HTMLButtonElement>('.start');
+  const start = document.querySelector<HTMLElement>('.start');
+
+  const startForm = document.querySelector<HTMLFormElement>('.start-card');
+
+  const nameField = document.querySelector<HTMLInputElement>('#visitor-name');
 
   const progress = document.querySelector<HTMLElement>('#hud-progress');
 
@@ -398,12 +474,30 @@ const village = loadVillage();
     }
   };
 
+  const nameKey = 'village-name';
+
+  const rememberedName = (): string => {
+    try {
+      return tidyName(window.localStorage.getItem(nameKey) ?? '');
+    } catch {
+      return '';
+    }
+  };
+
+  const rememberName = (name: string) => {
+    try {
+      window.localStorage.setItem(nameKey, name);
+    } catch {
+      // Storage unavailable; the name still lasts for this visit
+    }
+  };
+
   if (root !== null && canvas !== null) {
     // `?ghost=3` puts a few stand-in visitors in the village, to see them drawn without a server
     const requested = Number(new URLSearchParams(window.location.search).get('ghost') ?? '');
     const ghosts = Number.isFinite(requested) ? Math.min(Math.max(Math.trunc(requested), 0), 6) : 0;
 
-    const { music } = startVillage(root, canvas, data, (visited, total) => {
+    const { music, join } = startVillage(root, canvas, data, (visited, total) => {
       if (progress !== null) progress.textContent = visited === total ? `All ${total} huts visited` : `Huts ${visited}/${total}`;
     }, { ghosts });
 
@@ -425,18 +519,35 @@ const village = loadVillage();
       canvas.focus();
     });
 
-    // Audio may only start from a gesture: the start click doubles as the music gate
-    start?.addEventListener('click', () => {
-      start.hidden = true;
+    // The start card is the naming step as well as the audio gate: one gesture to join
+    const offered = tidyName(new URLSearchParams(window.location.search).get('name') ?? '')
+      || rememberedName()
+      || suggestedName();
+
+    if (nameField !== null) nameField.value = offered;
+
+    nameField?.addEventListener('input', () => {
+      if (nameField !== null) nameField.value = tidyName(nameField.value);
+    });
+
+    startForm?.addEventListener('submit', (event) => {
+      event.preventDefault();
+
+      const chosen = tidyName(nameField?.value ?? '') || offered;
+
+      if (nameField !== null) nameField.value = chosen;
+
+      rememberName(chosen);
+
+      start?.setAttribute('hidden', '');
       canvas.focus();
 
       if (remembered()) music.start();
 
       reflect();
-    });
 
-    canvas.addEventListener('focus', () => {
-      if (start !== null) start.hidden = true;
+      // Ghosts are stand-ins, not a room, so they never join one
+      if (ghosts === 0) join(createSocketPresence(chosen));
     });
   }
 </script>

@@ -7,9 +7,8 @@ import type { Visitor, VisitorEvent, VisitorState } from './visitors';
  * The other visitors in the village.
  *
  * Deliberately the whole of the transport: say where you are, and take away whatever everyone
- * else did since you last looked. Nothing here knows about sockets, and nothing about the map,
- * so the day there is a room to join, the socket goes in behind these three calls and nothing
- * above them has to change.
+ * else did since you last looked. The live socket and the offline ghosts both implement these
+ * three calls, without the game needing to know which one it is using.
  */
 export type Presence = {
   /** Say where you are now. */

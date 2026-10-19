@@ -1,19 +1,9 @@
-import { advanceTraveller, walkerView, type TravelMode, type Traveler } from './adventure';
+import { advanceTraveller, walkerView, type Traveler } from './adventure';
 import type { World } from './map';
 import type { Walker } from './scene';
-import type { CharacterLook, Facing } from './sprites';
+import type { Visitor, VisitorEvent, VisitorState } from './protocol';
 
-/** Someone else in the village: who they are, and how they look. */
-export type Visitor = { id: string; name: string; look: CharacterLook };
-
-/** Where a visitor is, in the village's own coordinates, so every client agrees without asking. */
-export type VisitorState = { area: World['area']; tx: number; ty: number; facing: Facing; mode: TravelMode };
-
-/** What the village learns about everyone else. */
-export type VisitorEvent =
-  | { kind: 'join'; visitor: Visitor; state: VisitorState }
-  | { kind: 'move'; id: string; state: VisitorState }
-  | { kind: 'leave'; id: string };
+export type { Visitor, VisitorEvent, VisitorState } from './protocol';
 
 /** A tile change that has arrived, but is not due on the replay clock yet. */
 type Arrival = { at: number; state: VisitorState };
