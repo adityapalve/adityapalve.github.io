@@ -11,7 +11,10 @@
     "binding": "ASSETS",
     "run_worker_first": ["/village/room"]
   },
-  "routes": [{ "pattern": "palve.dev", "custom_domain": true }],
+  "routes": [
+    { "pattern": "palve.dev", "custom_domain": true },
+    { "pattern": "www.palve.dev", "custom_domain": true }
+  ],
   "durable_objects": {
     "bindings": [{ "name": "VILLAGE", "class_name": "VillageRoom" }]
   },
