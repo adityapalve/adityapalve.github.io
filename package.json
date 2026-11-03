@@ -10,6 +10,7 @@
     "lint": "oxlint",
     "lint:fix": "oxlint --fix",
     "check": "astro check",
+    "test:records": "node --experimental-strip-types --test scripts/test-record-previews.mjs",
     "worker:types": "wrangler types worker/env.d.ts",
     "worker:check": "npm run worker:types && tsc -p worker/tsconfig.json",
     "worker:dev": "npm run build && wrangler dev",

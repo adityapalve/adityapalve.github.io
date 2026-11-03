@@ -1,0 +1,41 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import links from '../data/links.json';
+---
+
+<BaseLayout title="Links – Aditya Palve" description="A small collection of websites worth spending time with.">
+  <h1>Links</h1>
+
+  <p class="muted">A small, growing list of corners of the internet worth spending time in.</p>
+
+  <ul class="reading-list">
+    {links.map((link) => (
+      <li>
+        <a href={link.url}>{link.name}</a>
+        <p class="muted">{link.description}</p>
+      </li>
+    ))}
+  </ul>
+</BaseLayout>
+
+<style>
+  .reading-list {
+    list-style: none;
+    padding: 0;
+    margin-top: 2rem;
+  }
+
+  .reading-list li {
+    margin-bottom: 1.5rem;
+  }
+
+  .reading-list a {
+    font-weight: 600;
+  }
+
+  .reading-list p {
+    margin-top: 0.25rem;
+    margin-bottom: 0;
+    font-size: 0.9rem;
+  }
+</style>

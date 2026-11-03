@@ -2,20 +2,24 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 import { getCollection } from 'astro:content';
 import { groupByYear, hasNotes, spineStyle } from '../lib/books';
+import VinylCollection from '../components/VinylCollection.astro';
 
 const shelves = groupByYear(await getCollection('books'));
 
 const statusLabel = { reading: 'reading', finished: 'finished', abandoned: 'set aside' };
 ---
 
-<BaseLayout title="Bookshelf – Aditya Palve">
+<BaseLayout title="Bookshelf – Aditya Palve" wide>
   <h1>Bookshelf</h1>
 
   <p class="muted">
-    Books I've read, stacked by the year I finished them. Click a book to pick it up; a ring on the spine means I wrote notes.
+    Books I've read, with a few records to keep them company. Pick up a book to look inside;
+    put on a record and stay a while.
   </p>
 
+  <div class="reading-room">
   <section class="shelf" aria-label="Books by year">
+    <h2 class="section-label">Books <span class="notes-key">a ring means notes</span></h2>
     {[...shelves].map(([year, books]) => (
       <div class="shelf-year">
         <span class="shelf-label">{year}</span>
@@ -45,7 +49,7 @@ const statusLabel = { reading: 'reading', finished: 'finished', abandoned: 'set 
                 </button>
               </div>
 
-              <div class="book-details" id={`details-${book.id}`} role="region" aria-labelledby={`book-${book.id}`}>
+              <div class="book-details" id={`details-${book.id}`} inert role="region" aria-labelledby={`book-${book.id}`}>
                 <div class="book-details-clip">
                   <div class="book-details-content">
                     <p class="muted small book-meta">
@@ -65,12 +69,42 @@ const statusLabel = { reading: 'reading', finished: 'finished', abandoned: 'set 
       </div>
     ))}
   </section>
+  <VinylCollection />
+  </div>
 </BaseLayout>
 
 <style>
-  .shelf {
+  .reading-room {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 160px;
+    align-items: start;
+    gap: 3rem;
     margin-block: 2.5rem 3rem;
+  }
+
+  .shelf {
+    min-width: 0;
     --book-depth: 72px;
+  }
+
+  .section-label {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 32px;
+    margin: 0 0 1.5rem;
+    color: var(--color-muted);
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    font-weight: 400;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  .notes-key {
+    font-size: 0.55rem;
+    letter-spacing: 0;
+    text-transform: none;
   }
 
   .shelf-year {
@@ -313,7 +347,16 @@ const statusLabel = { reading: 'reading', finished: 'finished', abandoned: 'set 
     }
   }
 
-  @media (max-width: 480px) {
+  @media (max-width: 760px) {
+    .reading-room {
+      grid-template-columns: minmax(0, 1fr) 130px;
+      gap: 1.5rem;
+    }
+
+    .notes-key {
+      display: none;
+    }
+
     .shelf-year {
       grid-template-columns: 1fr;
       gap: 0.75rem;
@@ -321,10 +364,40 @@ const statusLabel = { reading: 'reading', finished: 'finished', abandoned: 'set 
 
     .spine {
       grid-template-columns: minmax(0, 1fr) auto;
-      padding-inline: 1rem;
+      padding-inline: 0.75rem;
     }
 
     .spine-author {
+      display: none;
+    }
+  }
+
+  @media (max-width: 600px) {
+    .reading-room {
+      grid-template-columns: minmax(0, 1fr) 84px;
+      gap: 1rem;
+    }
+
+    .shelf {
+      --book-depth: 40px;
+    }
+
+    .book {
+      height: max(64px, var(--spine-thickness));
+    }
+
+    .spine {
+      gap: 0.4rem;
+      padding-inline: 0.6rem;
+      font-size: 0.72rem;
+    }
+
+    .spine-mark {
+      width: 8px;
+      height: 8px;
+    }
+
+    .spine-status {
       display: none;
     }
   }
@@ -337,6 +410,10 @@ const statusLabel = { reading: 'reading', finished: 'finished', abandoned: 'set 
     for (const slot of slots) {
       delete slot.dataset.open;
       slot.querySelector('.book')?.setAttribute('aria-expanded', 'false');
+
+      const details = slot.querySelector<HTMLElement>('.book-details');
+
+      if (details) details.inert = true;
     }
   };
 
@@ -354,10 +431,14 @@ const statusLabel = { reading: 'reading', finished: 'finished', abandoned: 'set 
 
       slot.dataset.open = '';
       book.setAttribute('aria-expanded', 'true');
+
+      const details = slot.querySelector<HTMLElement>('.book-details');
+
+      if (details) details.inert = false;
     });
   }
 
   document.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape') closeAll();
+    if (event.key === 'Escape' && !document.querySelector('dialog[open]')) closeAll();
   });
 </script>

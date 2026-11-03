@@ -25,6 +25,7 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm run check
+      - run: npm run test:records
       - run: npm run worker:check
       - run: npm run build
       # Deployment belongs to Cloudflare: pushing to master builds and deploys the Worker.

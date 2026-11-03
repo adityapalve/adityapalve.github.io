@@ -8,8 +8,10 @@ A minimal, text-first personal website built with [Astro](https://astro.build).
 - **Village** – My work as a small pixel-art village you walk around
 - **Experience** – The same story as a plain page, for anyone who skips the walk
 - **Writing** – Blog posts and long-form content
-- **Bookshelf** – Books I've read as a shelf of generated spines, linked to my notes
+- **Bookshelf** – Books as generated spines, with a column of rotating vinyl records alongside
 - **Footpaths** – Map of places I've visited, generated from photo EXIF data
+- **Links** – A growing reading list of websites at `/links`
+- **Records** – Select a vinyl on the bookshelf to open an opt-in Apple Music player
 - **Contact** – Ways to get in touch
 
 The type is [ABC Areal](https://abcdinamo.com/typefaces/areal) for text and
@@ -80,6 +82,58 @@ Drop photos in `src/assets/footpaths/<Place Name>/`. The build reads GPS and dat
 EXIF and writes `src/data/footpaths.json` automatically (`npm run photos:import` to run
 it by hand). See [src/assets/footpaths/README.md](src/assets/footpaths/README.md) for
 overrides and captions.
+
+### Links (/links)
+
+Edit `src/data/links.json`. Each entry has a `name`, `url`, and short `description`;
+entries appear in file order. The starting list is Ben Kuhn and Patrick Collison.
+
+### Records (on /bookshelf)
+
+The bookshelf prototype places a slim vinyl column beside the books, including on
+mobile. The demo selections are in `src/data/records.ts`; the first comes from
+`src/data/music.json`. Each record has a title, artist, public Apple Music album URL,
+and a label colour. These are demo picks, not the owner's listening history.
+
+Only the record whose preview is actually playing rotates. Native audio events stop
+rotation on pause, buffering/seeking, completion, errors, switching albums, and closing
+the dock; reduced-motion preferences and hidden tabs also suppress animation. There
+is no separate animation toggle.
+
+Selecting a record opens a non-modal player dock and fetches its track previews from
+Apple's public iTunes lookup API **only then**. Playback still requires pressing play.
+Minimize tucks it into a small title bar without stopping the audio, so the books remain
+usable while listening. Closing it (button or Escape) stops/unloads the audio and cancels
+pending requests. Reopening the same record doesn't interrupt it. Failed or unavailable
+previews leave a direct Apple Music link; without JavaScript, records link straight there.
+
+The bookshelf plays promotional **track previews**, not full subscriber streams. Apple's
+cross-origin iframe has no supported playback-state API for its parent page, so using it
+here would make the rotation guesswork. The full-album link opens Apple Music (and pauses
+the local preview). Preview audio streams directly from Apple and is never cached in the
+repo. Track metadata is validated before use; no credentials or tokens are needed.
+
+The home/footer music entry now leads to the bookshelf. The original `/music` page
+is retained as a standalone prototype for comparison.
+
+### Standalone music prototype (/music)
+
+Edit `src/data/music.json` to change the featured album: `title`, `artist`,
+`appleMusicUrl`, and `note`. Use a public Apple Music **album** link such as
+`https://music.apple.com/gb/album/in-rainbows/1109714933`, not a private library link.
+The page derives the official embed URL from that link. Radiohead's *In Rainbows* is
+just a starter album, not imported listening history.
+
+The player loads only after a click, never autoplays, and needs no API keys or new
+backend. The direct Apple Music link also works without JavaScript or if an embed
+is blocked. Apple controls previews, regional availability, sign-in, and subscriber
+playback; full tracks require the visitor's own subscription. Browser privacy
+settings may require opening Apple Music directly to sign in.
+
+This does **not** connect to the site owner's library, show live listening activity,
+or keep playing across page navigations. A future custom library/player integration
+would need MusicKit, an Apple developer token signed on the server, and explicit
+user authorization. Never commit an Apple private key or user token to this repo.
 
 ### The village (/village)
 
@@ -316,6 +370,7 @@ At that size there is also room for the riso grain a 16px tab cannot hold.
 ```bash
 npm run lint    # oxlint with the vendored anti-slop rules (tools/oxlint/anti-slop)
 npm run check   # astro check (TypeScript)
+npm run test:records  # Apple URL and preview-response validation (also runs in CI)
 ```
 
 ## Original Quartz Site

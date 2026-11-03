@@ -4,9 +4,11 @@ interface Props {
   description?: string;
   /** Drop the reading column and the footer nav so the page can fill the window. */
   bleed?: boolean;
+  /** Room for the bookshelf's side-by-side books and records. */
+  wide?: boolean;
 }
 
-const { title, description = "Aditya Palve's personal website", bleed = false } = Astro.props;
+const { title, description = "Aditya Palve's personal website", bleed = false, wide = false } = Astro.props;
 
 /*
   Text is ABC Areal, subset from the licensed copy on this machine by `scripts/sync-fonts.mjs`
@@ -76,7 +78,7 @@ const preferences = [
       }
     </script>
   </head>
-  <body class:list={{ bleed }}>
+  <body class:list={{ bleed, wide }}>
     <main>
       <slot />
     </main>
@@ -88,6 +90,8 @@ const preferences = [
           <a href="/writing">writing</a> • 
           <a href="/bookshelf">bookshelf</a> • 
           <a href="/footpaths">footpaths</a> • 
+          <a href="/links">links</a> •
+          <a href="/bookshelf#records-heading">records</a> •
           <a href="/contact">contact</a>
         </p>
         <div class="controls">
@@ -276,6 +280,10 @@ const preferences = [
 
   main {
     flex: 1;
+  }
+
+  body.wide {
+    max-width: 940px;
   }
 
   body.bleed {

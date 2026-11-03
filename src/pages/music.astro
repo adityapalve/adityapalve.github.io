@@ -1,0 +1,189 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import album from '../data/music.json';
+
+import { appleMusicEmbedUrl } from '../lib/music';
+
+const embedUrl = appleMusicEmbedUrl(album.appleMusicUrl);
+---
+
+<BaseLayout title="Music – Aditya Palve" description="A little listening corner, one album at a time.">
+  <h1>Music</h1>
+
+  <p class="muted">A little listening corner. One album at a time.</p>
+
+  <section class="player" aria-labelledby="album-title">
+    <div class="record-sleeve">
+      <div class="record" aria-hidden="true"><span>33⅓</span></div>
+      <div>
+        <p class="label muted">On the turntable</p>
+        <h2 id="album-title">{album.title}</h2>
+        <p class="artist">{album.artist}</p>
+      </div>
+    </div>
+
+    <p class="album-note">{album.note}</p>
+
+    <div id="player-gate">
+      <button type="button" id="load-player" aria-controls="apple-music-player" hidden>
+        <span aria-hidden="true">▶</span> Load Apple Music player
+      </button>
+      <p class="small muted">The embedded player connects to Apple only when you load it. No autoplay.</p>
+    </div>
+
+    <iframe
+      id="apple-music-player"
+      title={`${album.title} by ${album.artist} on Apple Music`}
+      data-src={embedUrl}
+      allow="autoplay *; encrypted-media *; fullscreen *"
+      referrerpolicy="strict-origin-when-cross-origin"
+      height="450"
+      hidden
+    ></iframe>
+
+    <p class="apple-link small">
+      <a href={album.appleMusicUrl} target="_blank" rel="noopener noreferrer">Open in Apple Music <span aria-hidden="true">↗</span></a>
+    </p>
+  </section>
+
+  <p class="small muted">
+    Apple Music offers previews. Full tracks require your own Apple Music subscription and
+    sign-in through Apple. If the player or sign-in doesn't work in your browser, use the link above.
+  </p>
+  <p class="small muted">This is a shared album, not a live feed of my listening history.</p>
+  <noscript><p class="small muted">JavaScript is off. You can still listen using the Apple Music link above.</p></noscript>
+</BaseLayout>
+
+<style>
+  .player {
+    margin-block: 2rem 1.5rem;
+    padding: 1.5rem;
+    border-radius: 8px;
+    box-shadow: var(--shadow-border);
+  }
+
+  .record-sleeve {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+  }
+
+  .record {
+    flex: 0 0 auto;
+    display: grid;
+    place-items: center;
+    width: 96px;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background: repeating-radial-gradient(
+      circle,
+      var(--color-text) 0 2px,
+      color-mix(in oklab, var(--color-text) 80%, var(--color-bg)) 3px 4px
+    );
+  }
+
+  .record span {
+    display: grid;
+    place-items: center;
+    width: 36px;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+  }
+
+  .label {
+    margin-bottom: 0.35rem;
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  h2 {
+    margin: 0 0 0.2rem;
+  }
+
+  .artist {
+    margin: 0;
+  }
+
+  .album-note {
+    margin-block: 1.25rem;
+  }
+
+  button {
+    padding: 0.65rem 0.9rem;
+    margin-bottom: 0.75rem;
+    border: 1px solid var(--color-muted);
+    border-radius: 4px;
+    background: var(--color-code-bg);
+    color: var(--color-text);
+    font: inherit;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: background-color 150ms var(--ease-out);
+  }
+
+  button:focus-visible {
+    outline: 2px solid var(--color-link);
+    outline-offset: 3px;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    button:hover {
+      background: var(--color-surface);
+    }
+  }
+
+  iframe {
+    width: 100%;
+    border: 0;
+    border-radius: 8px;
+    background: var(--color-surface);
+  }
+
+  iframe:not([hidden]) {
+    display: block;
+  }
+
+  .apple-link {
+    margin: 1rem 0 0;
+  }
+
+  @media (max-width: 400px) {
+    .player {
+      padding: 1rem;
+    }
+
+    .record {
+      width: 64px;
+    }
+
+    .record-sleeve {
+      gap: 0.75rem;
+    }
+  }
+</style>
+
+<script>
+  const button = document.querySelector<HTMLButtonElement>('#load-player');
+
+  const frame = document.querySelector<HTMLIFrameElement>('#apple-music-player');
+
+  const gate = document.querySelector<HTMLDivElement>('#player-gate');
+
+  if (button !== null && frame !== null && gate !== null && frame.dataset.src) {
+    button.hidden = false;
+
+    button.addEventListener('click', () => {
+      // Loading is opt-in; neither a visit nor a remembered preference starts Apple requests.
+      frame.src = frame.dataset.src ?? '';
+      frame.hidden = false;
+      gate.hidden = true;
+      frame.focus();
+    }, { once: true });
+  }
+</script>

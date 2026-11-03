@@ -1,0 +1,334 @@
+---
+import { records } from '../data/records';
+import { appleMusicLookupUrl } from '../lib/music';
+---
+
+<aside class="records" aria-labelledby="records-heading" data-records>
+  <div class="records-heading">
+    <h2 id="records-heading">Records</h2>
+  </div>
+
+  <ol class="record-list">
+    {records.map((record, index) => (
+      <li>
+        <a
+          class="vinyl"
+          href={record.appleMusicUrl}
+          aria-label={`Listen to ${record.title} by ${record.artist}`}
+          aria-haspopup="dialog"
+          data-title={record.title}
+          data-artist={record.artist}
+          data-lookup={appleMusicLookupUrl(record.appleMusicUrl)}
+          style={`--record-label: ${record.label}; --record-offset: ${index * -7}s;`}
+        >
+          <span class="disc" aria-hidden="true">
+            <span class="disc-label">
+              <span class="label-top">SIDE A</span>
+              <span class="spindle"></span>
+              <span class="label-bottom">0{index + 1} · 33⅓</span>
+            </span>
+          </span>
+          <span class="record-caption">
+            <span class="record-title">{record.title}</span>
+            <span class="record-artist">{record.artist}</span>
+          </span>
+        </a>
+      </li>
+    ))}
+  </ol>
+
+  <p class="collection-note">Demo picks.<br />Select a record to listen.</p>
+</aside>
+
+<dialog id="record-dialog" aria-labelledby="record-dialog-title">
+  <div class="dialog-heading">
+    <div>
+      <p class="eyebrow">On the turntable</p>
+      <h2 id="record-dialog-title"></h2>
+      <p class="dialog-artist" data-player-artist></p>
+    </div>
+    <div class="player-controls">
+      <button class="minimize-player" type="button" aria-label="Minimize record player" aria-expanded="true" aria-controls="record-player">−</button>
+      <button class="close-player" type="button" aria-label="Close record player">×</button>
+    </div>
+  </div>
+  <div class="preview-controls">
+    <label class="eyebrow" for="record-track">Apple Music previews</label>
+    <select id="record-track" disabled><option>Select a record</option></select>
+    <audio id="record-player" aria-label="Track preview" controls preload="none"></audio>
+    <p class="preview-status" role="status" data-player-status></p>
+  </div>
+  <p class="player-help">
+    <a data-player-link target="_blank" rel="noopener noreferrer">Full album in Apple Music ↗</a>
+    <span>Short track previews here. Full albums play in Apple Music with your subscription.</span>
+  </p>
+</dialog>
+
+<style>
+  .records-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 32px;
+    margin-bottom: 1.5rem;
+  }
+
+  h2, .eyebrow {
+    margin: 0;
+    color: var(--color-muted);
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    font-weight: 400;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  .record-list {
+    display: grid;
+    gap: 1.75rem;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  li {
+    margin: 0;
+  }
+
+  .vinyl {
+    display: grid;
+    justify-items: center;
+    gap: 0.65rem;
+    text-align: center;
+    text-decoration: none;
+    color: var(--color-text);
+    border-radius: 4px;
+  }
+
+  .disc {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: 128px;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background:
+      conic-gradient(from 20deg, transparent 0deg, #ffffff18 35deg, transparent 65deg 180deg, #ffffff12 210deg, transparent 245deg),
+      repeating-radial-gradient(circle, #222 0 1px, #121212 2px 3px);
+    box-shadow: inset 0 0 0 1px #ffffff20, 0 3px 5px #0003, 0 12px 18px -12px #0007;
+    animation: revolve 22s linear infinite;
+    animation-delay: var(--record-offset);
+    animation-play-state: paused;
+    transition: scale 200ms var(--ease-out);
+  }
+
+  [data-playing] .disc {
+    animation-play-state: running;
+  }
+
+  .disc-label {
+    display: grid;
+    justify-items: center;
+    align-content: center;
+    gap: 5px;
+    width: 39%;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background: var(--record-label);
+    color: #171510;
+    font-family: var(--font-mono);
+    font-size: 6px;
+    line-height: 1;
+    letter-spacing: 0.08em;
+    box-shadow: inset 0 0 0 1px #0002;
+  }
+
+  .spindle {
+    width: 5px;
+    aspect-ratio: 1;
+    background: var(--color-bg);
+    border-radius: 50%;
+    box-shadow: 0 0 0 1px #0005;
+  }
+
+  .record-caption {
+    display: grid;
+    gap: 0.1rem;
+  }
+
+  .record-title {
+    font-size: 0.8rem;
+    font-weight: 500;
+    line-height: 1.3;
+  }
+
+  .record-artist {
+    color: var(--color-muted);
+    font-size: 0.7rem;
+  }
+
+  button {
+    border: 0;
+    background: transparent;
+    color: var(--color-muted);
+    cursor: pointer;
+    font: inherit;
+  }
+
+  .vinyl:focus-visible, button:focus-visible {
+    outline: 2px solid var(--color-link);
+    outline-offset: 5px;
+  }
+
+  .vinyl:active .disc {
+    scale: 0.96;
+  }
+
+  .collection-note {
+    margin-top: 1.5rem;
+    color: var(--color-muted);
+    font-size: 0.65rem;
+    text-align: center;
+    line-height: 1.5;
+  }
+
+  @keyframes revolve {
+    to { transform: rotate(360deg); }
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .vinyl:hover .disc { scale: 1.05; }
+    .vinyl:hover .record-title { text-decoration: underline; text-underline-offset: 3px; }
+    button:hover { color: var(--color-text); }
+  }
+
+  dialog {
+    position: fixed;
+    inset: auto 1rem 1rem auto;
+    z-index: 200;
+    width: min(400px, calc(100vw - 2rem));
+    max-height: calc(100dvh - 2rem);
+    margin: 0;
+    padding: 1.25rem;
+    border: 1px solid var(--outline-image);
+    border-radius: 10px;
+    background: var(--color-bg);
+    color: var(--color-text);
+    box-shadow: 0 20px 80px #0005;
+  }
+
+  .player-controls {
+    display: flex;
+  }
+
+  dialog[data-minimized] {
+    padding: 0.75rem 1rem;
+  }
+
+  dialog[data-minimized] .dialog-heading {
+    margin-bottom: 0;
+    align-items: center;
+  }
+
+  dialog[data-minimized] .eyebrow,
+  dialog[data-minimized] .preview-controls,
+  dialog[data-minimized] .player-help {
+    display: none;
+  }
+
+  dialog[data-minimized] #record-dialog-title {
+    margin-top: 0;
+    font-size: 0.9rem;
+  }
+
+  .dialog-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: start;
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  #record-dialog-title {
+    margin-top: 0.5rem;
+    color: var(--color-text);
+    font-family: var(--font-body);
+    font-size: 1.2rem;
+    font-weight: 600;
+    letter-spacing: normal;
+    text-transform: none;
+  }
+
+  .dialog-artist {
+    margin: 0.15rem 0 0;
+    font-size: 0.85rem;
+    color: var(--color-muted);
+  }
+
+  .close-player, .minimize-player {
+    flex-shrink: 0;
+    width: 44px;
+    height: 44px;
+    font-size: 1.5rem;
+  }
+
+  .preview-controls {
+    display: grid;
+    gap: 0.75rem;
+  }
+
+  select, audio {
+    width: 100%;
+    min-width: 0;
+  }
+
+  select {
+    padding: 0.65rem;
+    border: 1px solid var(--color-muted);
+    border-radius: 4px;
+    background: var(--color-bg);
+    color: var(--color-text);
+    font: inherit;
+    font-size: 0.8rem;
+  }
+
+  select:focus-visible {
+    outline: 2px solid var(--color-link);
+    outline-offset: 3px;
+  }
+
+  .preview-status {
+    margin: 0;
+    color: var(--color-muted);
+    font-size: 0.7rem;
+  }
+
+  .player-help {
+    display: grid;
+    gap: 0.5rem;
+    margin: 1rem 0 0;
+    font-size: 0.7rem;
+    color: var(--color-muted);
+  }
+
+  @media (max-width: 600px) {
+    .disc { width: 80px; }
+    .disc-label { font-size: 4px; gap: 3px; }
+    .spindle { width: 3px; }
+    .record-title { font-size: 0.65rem; }
+    .record-artist { font-size: 0.6rem; }
+    .records-heading { margin-bottom: 1.75rem; }
+    .record-list { gap: 2rem; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .disc { animation: none; transition: none; }
+    .vinyl:hover .disc, .vinyl:active .disc { scale: 1; }
+  }
+</style>
+
+<script>
+  import { setupRecords } from '../scripts/records';
+
+  setupRecords();
+</script>
