@@ -1,6 +1,6 @@
 ---
 import { records } from '../data/records';
-import { appleMusicLookupUrl } from '../lib/music';
+import { appleMusicEmbedUrl } from '../lib/music';
 ---
 
 <aside class="records" aria-labelledby="records-heading" data-records>
@@ -18,7 +18,7 @@ import { appleMusicLookupUrl } from '../lib/music';
           aria-haspopup="dialog"
           data-title={record.title}
           data-artist={record.artist}
-          data-lookup={appleMusicLookupUrl(record.appleMusicUrl)}
+          data-embed={appleMusicEmbedUrl(record.appleMusicUrl)}
           style={`--record-label: ${record.label}; --record-offset: ${index * -7}s;`}
         >
           <span class="disc" aria-hidden="true">
@@ -52,15 +52,17 @@ import { appleMusicLookupUrl } from '../lib/music';
       <button class="close-player" type="button" aria-label="Close record player">×</button>
     </div>
   </div>
-  <div class="preview-controls">
-    <label class="eyebrow" for="record-track">Apple Music previews</label>
-    <select id="record-track" disabled><option>Select a record</option></select>
-    <audio id="record-player" aria-label="Track preview" controls preload="none"></audio>
-    <p class="preview-status" role="status" data-player-status></p>
-  </div>
+  <iframe
+    id="record-player"
+    title="Apple Music album player"
+    allow="autoplay *; encrypted-media *; fullscreen *"
+    referrerpolicy="strict-origin-when-cross-origin"
+    height="450"
+  ></iframe>
   <p class="player-help">
-    <a data-player-link target="_blank" rel="noopener noreferrer">Full album in Apple Music ↗</a>
-    <span>Short track previews here. Full albums play in Apple Music with your subscription.</span>
+    <a data-player-link target="_blank" rel="noopener noreferrer">Open in Apple Music ↗</a>
+    <span>Sign in through Apple for full tracks with your subscription. Minimize to keep browsing.</span>
+    <span class="rotation-note">The selected record spins while its player is open, even if paused.</span>
   </p>
 </dialog>
 
@@ -122,7 +124,7 @@ import { appleMusicLookupUrl } from '../lib/music';
     transition: scale 200ms var(--ease-out);
   }
 
-  [data-playing] .disc {
+  [data-on-turntable] .disc {
     animation-play-state: running;
   }
 
@@ -231,7 +233,7 @@ import { appleMusicLookupUrl } from '../lib/music';
   }
 
   dialog[data-minimized] .eyebrow,
-  dialog[data-minimized] .preview-controls,
+  dialog[data-minimized] iframe,
   dialog[data-minimized] .player-help {
     display: none;
   }
@@ -272,35 +274,12 @@ import { appleMusicLookupUrl } from '../lib/music';
     font-size: 1.5rem;
   }
 
-  .preview-controls {
-    display: grid;
-    gap: 0.75rem;
-  }
-
-  select, audio {
+  iframe {
+    display: block;
     width: 100%;
-    min-width: 0;
-  }
-
-  select {
-    padding: 0.65rem;
-    border: 1px solid var(--color-muted);
-    border-radius: 4px;
-    background: var(--color-bg);
-    color: var(--color-text);
-    font: inherit;
-    font-size: 0.8rem;
-  }
-
-  select:focus-visible {
-    outline: 2px solid var(--color-link);
-    outline-offset: 3px;
-  }
-
-  .preview-status {
-    margin: 0;
-    color: var(--color-muted);
-    font-size: 0.7rem;
+    border: 0;
+    border-radius: 8px;
+    background: var(--color-surface);
   }
 
   .player-help {

@@ -95,23 +95,28 @@ mobile. The demo selections are in `src/data/records.ts`; the first comes from
 `src/data/music.json`. Each record has a title, artist, public Apple Music album URL,
 and a label colour. These are demo picks, not the owner's listening history.
 
-Only the record whose preview is actually playing rotates. Native audio events stop
-rotation on pause, buffering/seeking, completion, errors, switching albums, and closing
-the dock; reduced-motion preferences and hidden tabs also suppress animation. There
-is no separate animation toggle.
+Selecting a record opens Apple's official album embed in a non-modal dock. The player
+connects to Apple **only then** and does not autoplay. Minimize tucks it into a small
+title bar while preserving the mounted iframe and its URL, so you can keep reading
+without restarting playback. Reopening the same record also preserves the player.
+Switching records replaces the album; closing the dock (button or Escape from the page)
+unloads the iframe to stop audio. The direct Apple Music link closes the dock before
+handing off. Without JavaScript, records link straight to Apple.
 
-Selecting a record opens a non-modal player dock and fetches its track previews from
-Apple's public iTunes lookup API **only then**. Playback still requires pressing play.
-Minimize tucks it into a small title bar without stopping the audio, so the books remain
-usable while listening. Closing it (button or Escape) stops/unloads the audio and cancels
-pending requests. Reopening the same record doesn't interrupt it. Failed or unavailable
-previews leave a direct Apple Music link; without JavaScript, records link straight there.
+Only the selected record spins while its dock is open, including when minimized.
+This is an **on-the-turntable indicator**, not an exact playback meter: Apple's
+cross-origin embed exposes no supported play/pause events to this page, so the disc
+can still spin when playback is paused or has finished inside Apple. Closing the dock
+stops rotation; selecting another record transfers it. Reduced-motion preferences and
+hidden tabs suppress animation. There is no separate rotation toggle.
 
-The bookshelf plays promotional **track previews**, not full subscriber streams. Apple's
-cross-origin iframe has no supported playback-state API for its parent page, so using it
-here would make the rotation guesswork. The full-album link opens Apple Music (and pauses
-the local preview). Preview audio streams directly from Apple and is never cached in the
-repo. Track metadata is validated before use; no credentials or tokens are needed.
+The dock is not limited to our own 30-second-preview player anymore. Apple controls
+previews, subscriber playback, and regional availability. Full tracks require the
+visitor's Apple Music subscription and sign-in through Apple; browser privacy settings
+may require opening Apple Music directly. We cannot guarantee subscriber playback in
+every browser. No API credentials or tokens are stored by the site, and nothing keeps
+playing across full-page navigation. The earlier preview-only implementation has been
+removed rather than retained as a second player.
 
 The home/footer music entry now leads to the bookshelf. The original `/music` page
 is retained as a standalone prototype for comparison.
@@ -370,7 +375,7 @@ At that size there is also room for the riso grain a 16px tab cannot hold.
 ```bash
 npm run lint    # oxlint with the vendored anti-slop rules (tools/oxlint/anti-slop)
 npm run check   # astro check (TypeScript)
-npm run test:records  # Apple URL and preview-response validation (also runs in CI)
+npm run test:records  # Apple album/embed URL validation (also runs in CI)
 ```
 
 ## Original Quartz Site
